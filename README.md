@@ -14,4 +14,4 @@
 * `/ai-service`: Mô hình phân tích dữ liệu.
 * `/database`: Chứa script SQL khởi tạo bảng.
 
-## 👥 Đội ngũ Phát triển
+## Đội ngũ Phát triển
