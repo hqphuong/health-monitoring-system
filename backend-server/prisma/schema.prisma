@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+// ==========================================
+// CẤU HÌNH KẾT NỐI DATABASE
+// ==========================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ĐỊNH NGHĨA CÁC BẢNG (MODELS)
+// ==========================================
+
+// 1. Bảng USER
+model User {
+  user_id         String    @id @default(uuid()) @db.VarChar(50)
+  email           String    @unique @db.VarChar(100)
+  password        String    @db.VarChar(255)
+  height          Float?
+  weight          Float?
+  gender          String?   @db.VarChar(10)
+  birth           DateTime? @db.Date
+  systolic_bp     Int?      // Huyết áp tâm thu
+  diastolic_bp    Int?      // Huyết áp tâm trương
+  created_at      DateTime? @default(now())
+
+  // Các mối quan hệ (1 User có nhiều Relatives, Devices, Sessions, Metrics, Alerts)
+  relatives       Relative[]
+  devices         Device[]
+  workout_sessions WorkoutSession[]
+  health_metrics  HealthMetric[]
+  alert_logs      AlertLog[]
+
+  @@map("user") // Ép tên bảng trong DB là chữ thường
+}
+
+// 2. Bảng RELATIVE (Người thân khẩn cấp)
+model Relative {
+  phone_num       String  @id @db.VarChar(20)
+  user_id         String? @db.VarChar(50)
+  contact_name    String  @db.VarChar(100)
+  relationship    String? @db.VarChar(50)
+
+  user            User?   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("relative")
+}
+
+// 3. Bảng DEVICE (Thiết bị/Nguồn dữ liệu)
+model Device {
+  device_id       String    @id @db.VarChar(50)
+  user_id         String?   @db.VarChar(50)
+  provider        String    @db.VarChar(50) // vd: 'health_connect', 'fitbit'
+  status          String?   @db.VarChar(20)
+  last_sync_time  DateTime?
+
+  user            User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("device")
+}
+
+// 4. Bảng WORKOUT_SESSION (Buổi tập luyện)
+model WorkoutSession {
+  work_id         String    @id @default(uuid()) @db.VarChar(50)
+  user_id         String?   @db.VarChar(50)
+  start_time      DateTime
+  end_time        DateTime?
+  max_heart_rate  Int?
+  av_heart_rate   Int?
+  status          String?   @db.VarChar(20)
+
+  user            User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  health_metrics  HealthMetric[]
+  alert_logs      AlertLog[]
+
+  @@map("workout_session")
+}
+
+// 5. Bảng HEALTH_METRIC (Kho chứa dữ liệu khổng lồ)
+model HealthMetric {
+  health_id       String    @id @default(uuid()) @db.VarChar(50)
+  user_id         String?   @db.VarChar(50)
+  work_id         String?   @db.VarChar(50)
+  record_time     DateTime
+  heart_rate      Int?
+  steps           Int?
+  sleep_duration  Int?      // Đã đổi sang đơn vị Phút
+  stress_level    Int?
+  raw_data        Json?     // Cột "ăn tiền" chứa các chỉ số SpO2, HRV nâng cao...
+
+  user            User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id], onDelete: SetNull)
+
+  @@map("health_metric")
+}
+
+// 6. Bảng ALERT_LOG (Nhật ký cảnh báo)
+model AlertLog {
+  alert_id          String    @id @default(uuid()) @db.VarChar(50)
+  user_id           String?   @db.VarChar(50)
+  work_id           String?   @db.VarChar(50)
+  type              String    @db.VarChar(50)
+  trigger_heart_rate Int
+  alert_time        DateTime
+  is_sos_sent       Boolean?  @default(false)
+
+  user            User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id], onDelete: SetNull)
+
+  @@map("alert_log")
+}
