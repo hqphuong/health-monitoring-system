@@ -1,0 +1,6 @@
+$kind: collection
+name: 'Health Monitoring System API'
+variables:
+  - key: baseUrl
+    value: ''
+    description: 'Base URL for the Health Monitoring System backend (e.g., http://localhost:3000)'

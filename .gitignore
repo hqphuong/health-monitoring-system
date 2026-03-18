@@ -20,3 +20,4 @@ backend-server/npm-debug.log*
 ai-service/venv/
 ai-service/__pycache__/
 ai-service/*.pyc
+/generated/prisma

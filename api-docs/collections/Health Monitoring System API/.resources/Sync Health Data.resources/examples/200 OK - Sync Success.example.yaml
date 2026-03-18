@@ -1,0 +1,19 @@
+$kind: http-example
+name: '200 OK - Sync Success'
+request:
+  method: POST
+  url: '{{baseUrl}}/api/v1/health-data/sync'
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Health data synced successfully",
+        "synced_records": 3
+      }
+order: 1000

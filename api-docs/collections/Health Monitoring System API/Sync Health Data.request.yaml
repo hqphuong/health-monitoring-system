@@ -1,0 +1,33 @@
+$kind: http-request
+name: 'Sync Health Data'
+method: POST
+url: '{{baseUrl}}/api/v1/health-data/sync'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user_id": "user_123",
+      "device_provider": "fitbit",
+      "metrics": [
+        {
+          "record_time": "2026-03-16T10:15:00Z",
+          "heart_rate": 78,
+          "steps": 1240,
+          "sleep_duration": 7.5,
+          "stress_level": 2,
+          "work_id": "work_456",
+          "raw_data": {
+            "source": "fitbit",
+            "payload": {
+              "hr": 78,
+              "steps": 1240
+            }
+          }
+        }
+      ]
+    }
+examples: './.resources/Sync Health Data.resources/examples'
