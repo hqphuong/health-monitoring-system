@@ -31,7 +31,8 @@ const router = express.Router();
  *             type: object
  *             properties:
  *               id_token:
- *                 type: eyJhbGci...
+ *                 type: string
+ *                 example: eyJhbGci...
  *     responses:
  *       200:
  *         description: Đăng nhập thành công
@@ -57,13 +58,17 @@ router.post('/google', googleAuth);
  *               - full_name
  *             properties:
  *               email:
- *                 type: nguyenvanA@gmail.com
+ *                 type: string
+ *                 example: nguyenvanA@gmail.com
  *               password:
- *                 type: Password123
+ *                 type: string
+ *                 example: Password123
  *              confirm_password:
- *                type: Password123
+ *                type: string
+ *                example: Password123
  *               full_name:
- *                 type: Nguyen Van A
+ *                 type: string
+ *                 example: Nguyen Van A
  *     responses:
  *       201:
  *         description: Đăng ký thành công
@@ -84,9 +89,11 @@ router.post('/registerUser', registerUser);
  *             type: object
  *             properties:
  *               email:
- *                 type: nguyenvanA@gmail.com
+ *                 type: string
+ *                 example: nguyenvanA@gmail.com
  *               password:
- *                 type: Password123
+ *                 type: string
+ *                 example: Password123
  *     responses:
  *       200:
  *         description: Đăng nhập thành công
@@ -107,7 +114,8 @@ router.post('/login', login);
  *             type: object
  *             properties:
  *               email:
- *                 type: nguyenvanA@gmail.com
+ *                 type: string
+ *                 example: nguyenvanA@gmail.com
  *     responses:
  *       200:
  *         description: Đã gửi mã OTP qua email
@@ -128,11 +136,14 @@ router.post('/forgot-password', forgotPassword);
  *             type: object
  *             properties:
  *               email:
- *                 type: nguyenvanA@gmail.com
+ *                 type: string
+ *                 example: nguyenvanA@gmail.com
  *               otp:
- *                 type: 123456
+ *                 type: string
+ *                 example: 123456
  *               new_password:
- *                 type: NewPassword123
+ *                 type: string
+ *                 example: NewPassword123
  *     responses:
  *       200:
  *         description: Đặt lại mật khẩu thành công
