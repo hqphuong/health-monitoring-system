@@ -15,7 +15,6 @@ const options = {
                 description: 'Môi trường Local' 
             },
             { 
-                // Đã sửa đổi: Xóa một dấu / bị dư ở đây
                 url: 'https://healthguard-api-42q2.onrender.com/api/v1', 
                 description: 'Môi trường Production' 
             }
