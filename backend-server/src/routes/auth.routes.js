@@ -1,5 +1,14 @@
 import express from 'express';
-import {registerUser, login, logout, googleAuth, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+// Nhớ check lại đường dẫn import controller của bạn nhé
+import { 
+    googleAuth, 
+    registerUser, 
+    login, 
+    forgotPassword, 
+    resetPassword, 
+    logout 
+} from '../controllers/auth.controller.js';
+
 const router = express.Router();
 
 /**
@@ -26,7 +35,7 @@ const router = express.Router();
  * type: string
  * responses:
  * 200:
- * description: Đăng nhập Google thành công, trả về JWT
+ * description: Đăng nhập thành công
  */
 router.post('/google', googleAuth);
 
@@ -42,7 +51,7 @@ router.post('/google', googleAuth);
  * application/json:
  * schema:
  * type: object
- * required: 
+ * required:
  * - email
  * - password
  * - full_name
@@ -81,7 +90,7 @@ router.post('/registerUser', registerUser);
  * default: manual
  * responses:
  * 200:
- * description: Đăng nhập thành công, trả về JWT Token
+ * description: Đăng nhập thành công
  */
 router.post('/login', login);
 
@@ -138,7 +147,7 @@ router.post('/reset-password', resetPassword);
  * summary: Đăng xuất khỏi hệ thống
  * tags: [Auth]
  * security:
- * - bearerAuth: [] 
+ * - bearerAuth: []
  * responses:
  * 200:
  * description: Đăng xuất thành công
