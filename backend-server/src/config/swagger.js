@@ -10,10 +10,10 @@ const options = {
             description: 'Tài liệu tích hợp API cho hệ thống Health Monitoring',
         },
         servers: [
-            { 
-                url: 'http://localhost:3000/api/v1', 
-                description: 'Môi trường Local' 
-            },
+            // { 
+            //     url: 'http://localhost:3000/api/v1', 
+            //     description: 'Môi trường Local' 
+            // },
             { 
                 url: 'https://healthguard-api-42q2.onrender.com/api/v1', 
                 description: 'Môi trường Production' 
