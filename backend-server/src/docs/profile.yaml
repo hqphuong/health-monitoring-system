@@ -1,0 +1,62 @@
+tags:
+  - name: Profile
+    description: Các API quản lý hồ sơ sức khỏe
+
+paths:
+  /profile:
+    get:
+      summary: Lấy thông tin hồ sơ sức khỏe của người dùng
+      tags: [Profile]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Lấy thông tin hồ sơ thành công
+    patch:
+      summary: Cập nhật thông tin hồ sơ sức khỏe của người dùng
+      tags: [Profile]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                height:
+                  type: number
+                  format: float
+                  example: 175.5
+                  nullable: true
+                weight:
+                  type: number
+                  format: float
+                  example: 68.5
+                  nullable: true
+                gender:
+                  type: string
+                  example: "Nam"
+                  nullable: true
+                birth:
+                  type: string
+                  format: date
+                  example: "1998-05-20"
+                  nullable: true
+                systolic_bp:
+                  type: integer
+                  description: Huyết áp tâm thu
+                  example: 120
+                  nullable: true
+                diastolic_bp:
+                  type: integer
+                  description: Huyết áp tâm trương
+                  example: 80
+                  nullable: true
+      responses:
+        200:
+          description: Cập nhật hồ sơ sức khỏe thành công
+        400:
+          description: Dữ liệu đầu vào không hợp lệ
+        401:
+          description: Không tìm thấy thông tin xác thực người dùng

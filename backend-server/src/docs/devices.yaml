@@ -1,0 +1,56 @@
+tags:
+  - name: Devices
+    description: Quản lý kết nối thiết bị đo sức khỏe (Đồng hồ, vòng tay...)
+
+paths:
+  /devices:
+    get:
+      summary: Lấy danh sách thiết bị đang kết nối
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Thành công
+
+    post:
+      summary: Cấp quyền truy cập (Connect) thiết bị mới
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_id
+                - provider
+              properties:
+                device_id:
+                  type: string
+                  example: "hw_mac_cd34"
+                provider:
+                  type: string
+                  example: "garmin"
+      responses:
+        201:
+          description: Kết nối thiết bị thành công
+
+  /devices/{device_id}:
+    delete:
+      summary: Ngắt kết nối (Disconnect) thiết bị
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: device_id
+          required: true
+          description: Mã phần cứng thiết bị cần ngắt
+          schema:
+            type: string
+      responses:
+        200:
+          description: Đã ngắt kết nối thiết bị an toàn
