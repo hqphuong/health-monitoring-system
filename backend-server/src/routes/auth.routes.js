@@ -31,7 +31,7 @@ const router = express.Router();
  *             type: object
  *             properties:
  *               id_token:
- *                 type: string
+ *                 type: eyJhbGci...
  *     responses:
  *       200:
  *         description: Đăng nhập thành công
@@ -53,14 +53,17 @@ router.post('/google', googleAuth);
  *             required:
  *               - email
  *               - password
+ *               - confirm_password
  *               - full_name
  *             properties:
  *               email:
- *                 type: string
+ *                 type: nguyenvanA@gmail.com
  *               password:
- *                 type: string
+ *                 type: Password123
+ *              confirm_password:
+ *                type: Password123
  *               full_name:
- *                 type: string
+ *                 type: Nguyen Van A
  *     responses:
  *       201:
  *         description: Đăng ký thành công
@@ -81,12 +84,9 @@ router.post('/registerUser', registerUser);
  *             type: object
  *             properties:
  *               email:
- *                 type: string
+ *                 type: nguyenvanA@gmail.com
  *               password:
- *                 type: string
- *               login_type:
- *                 type: string
- *                 default: manual
+ *                 type: Password123
  *     responses:
  *       200:
  *         description: Đăng nhập thành công
@@ -107,7 +107,7 @@ router.post('/login', login);
  *             type: object
  *             properties:
  *               email:
- *                 type: string
+ *                 type: nguyenvanA@gmail.com
  *     responses:
  *       200:
  *         description: Đã gửi mã OTP qua email
@@ -128,11 +128,11 @@ router.post('/forgot-password', forgotPassword);
  *             type: object
  *             properties:
  *               email:
- *                 type: string
+ *                 type: nguyenvanA@gmail.com
  *               otp:
- *                 type: string
+ *                 type: 123456
  *               new_password:
- *                 type: string
+ *                 type: NewPassword123
  *     responses:
  *       200:
  *         description: Đặt lại mật khẩu thành công
