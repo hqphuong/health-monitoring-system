@@ -31,7 +31,7 @@ const options = {
         security: [{ bearerAuth: [] }],
     },
     apis: [
-        './src/docs/*.yml',    
+        './src/docs/*.yaml',    
         './src/routes/*.js'   
     ],
 };
