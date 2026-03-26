@@ -7,6 +7,7 @@ const router = express.Router();
 router.use('/auth', authRoutes);
 router.use('/profile', profileRoutes);
 // router.use('/relatives', relativeRoutes);
+// router.use('/devices', deviceRoutes);
 
 // router.use('/internal/alerts', internalRoutes); 
 
