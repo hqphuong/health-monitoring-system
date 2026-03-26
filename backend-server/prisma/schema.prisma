@@ -64,9 +64,9 @@ model HealthProfile {
 // 3. Bảng RELATIVE (Người thân khẩn cấp)
 model Relative {
   phone_num    String  @db.VarChar(20)
-  user_id      String? @db.VarChar(50)
+  user_id      String @db.VarChar(50)
   contact_name String  @db.VarChar(100)
-  relationship String? @db.VarChar(50)
+  relationship String @db.VarChar(50)
   relative_id  String  @id @default(uuid()) @db.VarChar(50)
 
   user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)

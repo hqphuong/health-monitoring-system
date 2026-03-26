@@ -114,15 +114,3 @@ paths:
       responses:
         200:
           description: Reset thành công
-
-  /auth/logout:
-    post:
-      summary: Đăng xuất
-      tags: [Auth]
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Logout thành công
-        401:
-          description: Chưa xác thực

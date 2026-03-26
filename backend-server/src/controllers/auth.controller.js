@@ -8,7 +8,6 @@ import { sendEmail } from '../utils/sendEmail.js';
 // Thay CLIENT_ID bằng ID thật lấy từ Google Cloud Console
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); 
 
-// Thêm hàm này vào auth.controller.js
 export const googleAuth = async (req, res) => {
     try {
         const { id_token } = req.body;
@@ -189,19 +188,6 @@ export const login = async (req, res) => {
 
     } catch (error) {
         console.error("Lỗi đăng nhập:", error);
-        return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
-    }
-};
-
-export const logout = async (req, res) => {
-    try {
-        // FE tự xóa Token ở LocalStorage/AsyncStorage.
-        
-        return res.status(200).json({
-            status: "success",
-            message: "Đăng xuất thành công."
-        });
-    } catch (error) {
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
