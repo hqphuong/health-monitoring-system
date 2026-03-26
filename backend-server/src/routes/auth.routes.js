@@ -42,7 +42,10 @@ router.post('/google', googleAuth);
  * application/json:
  * schema:
  * type: object
- * required: [email, password, full_name]
+ * required: 
+ * - email
+ * - password
+ * - full_name
  * properties:
  * email:
  * type: string
@@ -78,7 +81,7 @@ router.post('/registerUser', registerUser);
  * default: manual
  * responses:
  * 200:
- * description: Đăng nhập thành công
+ * description: Đăng nhập thành công, trả về JWT Token
  */
 router.post('/login', login);
 
