@@ -54,3 +54,32 @@ paths:
       responses:
         200:
           description: Đã ngắt kết nối thiết bị an toàn
+  /devices/{device_id}/status:
+    patch:
+      summary: Cập nhật trạng thái kết nối của thiết bị
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: device_id
+          required: true
+          description: Mã phần cứng thiết bị
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  example: "offline"
+                  description: "Các trạng thái: connected, disconnected, offline"
+      responses:
+        200:
+          description: Cập nhật trạng thái thành công

@@ -80,7 +80,7 @@ model Device {
   user_id        String?   @db.VarChar(50)
   provider       String    @db.VarChar(50) // vd: 'health_connect', 'fitbit'
   status         String?   @db.VarChar(20)
-  last_sync_time DateTime?
+  last_sync_time DateTime @default(now())
 
   user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
