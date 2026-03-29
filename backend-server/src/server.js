@@ -3,7 +3,7 @@ import apiRoutes from './routes/index.js';
 import { setupSwagger } from './config/swagger.js';
 
 const app = express();
-app.use(express.json()); // Đọc được JSON từ Body Postman
+app.use(express.json()); 
 
 app.use('/api/v1', apiRoutes);
 
