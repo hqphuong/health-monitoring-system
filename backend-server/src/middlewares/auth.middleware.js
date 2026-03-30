@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import prisma from '../lib/prisma.js';
 
 export const verifyToken = (req, res, next) => {
     try {
@@ -32,5 +33,28 @@ export const verifyToken = (req, res, next) => {
             return res.status(401).json({ status: "error", message: "Phiên đăng nhập đã hết hạn." });
         }
         return res.status(403).json({ status: "error", message: "Token không hợp lệ." });
+    }
+};
+
+export const checkProfileComplete = async (req, res, next) => {
+    try {
+        const userId = req.user.user_id;
+
+        const profile = await prisma.healthProfile.findUnique({
+            where: { user_id: userId }
+        });
+
+        // Kiểm tra xem các trường bắt buộc có bị null không
+        if (!profile || !profile.birth || !profile.weight || !profile.height) {
+            return res.status(403).json({
+                status: "error",
+                code: "PROFILE_INCOMPLETE",
+                message: "Vui lòng hoàn thiện hồ sơ sức khỏe (chiều cao, cân nặng, ngày sinh) để hệ thống có thể phân tích chính xác."
+            });
+        }
+
+        next();
+    } catch (error) {
+        return res.status(500).json({ status: "error", message: "Lỗi kiểm tra hồ sơ " + error.message });
     }
 };
