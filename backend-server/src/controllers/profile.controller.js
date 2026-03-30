@@ -23,14 +23,14 @@ export const getHealthProfile = async (req, res) => {
 };
 
 export const updateHealthProfile = async (req, res) => {
-    const { bloodType, height, weight, allergies, chronicDiseases, currentMedication } = req.body;
+    const { height, weight, gender,birth, systolic_bp, diastolic_bp } = req.body;
     try {
         const profile = await prisma.healthProfile.upsert({
             where: { user_id: req.user.user_id },
-            update: { bloodType, height, weight, allergies, chronicDiseases, currentMedication },
+            update: { height, weight, gender, birth, systolic_bp, diastolic_bp },
             create: { 
                 user_id: req.user.user_id, 
-                bloodType, height, weight, allergies, chronicDiseases, currentMedication 
+                height, weight, gender, birth, systolic_bp, diastolic_bp
             },
         });
         res.status(200).json({ message: "Cập nhật thành công", data: profile });
