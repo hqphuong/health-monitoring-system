@@ -4,6 +4,7 @@ import profileRoutes from './profile.routes.js';
 import relativeRoutes from './relative.routes.js';
 import deviceRoutes from './device.routes.js';
 import metricRoutes from './metric.routes.js';
+
 const router = express.Router();
 
 router.use('/auth', authRoutes);

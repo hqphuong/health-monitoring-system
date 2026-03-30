@@ -6,7 +6,7 @@ paths:
   /metrics/sync:
     post:
       summary: Đồng bộ dữ liệu sức khỏe từ thiết bị (Bulk Insert)
-      description: Nhận danh sách dữ liệu sinh lý từ thiết bị đeo. Đi qua hệ thống Bác sĩ ảo để phân tích và trả về mức độ cảnh báo (NORMAL, WARNING, SOS). Nếu phát hiện rủi ro mức SOS, hệ thống sẽ tự động đính kèm danh bạ khẩn cấp để App thực hiện cuộc gọi.
+      description: Nhận danh sách dữ liệu sinh lý từ thiết bị đeo. Phân tích mức độ cảnh báo (NORMAL, WARNING, SOS).
       tags: [HealthMetrics]
       security:
         - bearerAuth: []
@@ -20,16 +20,13 @@ paths:
                 - device_id
                 - metrics
               properties:
-                user_id:
-                  type: string
-                  description: "(Bỏ qua) Hệ thống tự lấy từ Token để đảm bảo bảo mật"
                 device_id:
                   type: string
-                  example: "dev_watch_01"
+                  example: "hw_mac_cd34"
                 metrics:
                   type: array
                   minItems: 1
-                  description: "Mảng chứa các bản ghi sức khỏe. Ít nhất phải có 1 bản ghi."
+                  description: "Mảng chứa các bản ghi sức khỏe."
                   items:
                     type: object
                     required:
@@ -38,30 +35,27 @@ paths:
                       record_time:
                         type: string
                         format: date-time
-                        example: "2026-03-30T06:30:00Z"
+                        example: "2026-03-30T06:40:00Z"
                       heart_rate:
                         type: integer
-                        example: 72
-                        description: "Nhịp tim (BPM)"
+                        example: 180
                       steps:
                         type: integer
-                        example: 120
-                        description: "Số bước chân tích lũy"
+                        example: 0
                       sleep_duration:
                         type: integer
                         example: 420
-                        description: "Thời gian ngủ (phút)"
+                        nullable: true
                       stress_level:
                         type: integer
                         example: 18
-                        description: "Mức độ căng thẳng (0-100)"
                       raw_data:
                         type: object
-                        description: "Dữ liệu mở rộng (huyết áp, SpO2...)"
-                        example: { "spo2": 96, "systolic_bp": 120, "diastolic_bp": 80 }
+                        nullable: true
+                        example: { "spo2": 98 }
       responses:
         201:
-          description: Đồng bộ dữ liệu thành công (Kèm theo danh bạ SOS nếu có nguy hiểm)
+          description: Đồng bộ dữ liệu thành công
           content:
             application/json:
               schema:
@@ -71,23 +65,10 @@ paths:
                   message: "Đã đồng bộ 2 bản ghi."
                   alert:
                     level: "SOS"
-                    message: "KÍCH HOẠT CẤP CỨU: Nhịp tim nghỉ ngơi mức NGUY HIỂM (150 BPM)"
-                  emergency_contacts: 
-                    - "0896522306"
-                    - "0912345678"
+                    message: "Cảnh báo: Nhịp tim cao bất thường!"
         400:
           description: Dữ liệu payload gửi lên không hợp lệ
         401:
           description: Thiếu Token hoặc Token đã hết hạn
-        403:
-          description: Lỗi phân quyền (Chưa điền Profile hoặc Thiết bị chưa kết nối)
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "error"
-                  code: "PROFILE_INCOMPLETE"
-                  message: "Vui lòng hoàn thiện hồ sơ sức khỏe (chiều cao, cân nặng, ngày sinh) để hệ thống có thể phân tích chính xác."
         500:
           description: Lỗi hệ thống máy chủ
