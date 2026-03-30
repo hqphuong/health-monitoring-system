@@ -1,3 +1,10 @@
+/**
+ * Health Tips Service
+ * Xử lý business logic cho module mẹo sức khỏe.
+ * Tách biệt data access (import từ data store) khỏi business logic (Yêu cầu 6.1).
+ * Sau này có thể thay thế nguồn dữ liệu mà không thay đổi controller.
+ */
+
 import { healthTips, categoryNames } from "../data/health-tips.data.js";
 
 /**
@@ -7,11 +14,12 @@ import { healthTips, categoryNames } from "../data/health-tips.data.js";
  * @returns {Array<Object>} Danh sách tips đã lọc
  */
 export function getAllTips(options = {}) {
+  // Lọc theo category nếu có, nếu không trả bản sao toàn bộ mảng
   const { category } = options;
   if (category) {
     return healthTips.filter((tip) => tip.category === category);
   }
-  return [...healthTips];
+  return [...healthTips]; // Spread để tránh mutation mảng gốc
 }
 
 /**
@@ -23,13 +31,18 @@ export function getAllTips(options = {}) {
  */
 export function getRandomTips(options = {}) {
   const { count = 1, category } = options;
+
+  // Lọc theo category trước nếu có (Yêu cầu 3.3)
   let pool = category
     ? healthTips.filter((tip) => tip.category === category)
     : [...healthTips];
 
+  // Nếu count > số tips có sẵn, trả về toàn bộ (Yêu cầu 2.3)
   const actualCount = Math.min(count, pool.length);
   const result = [];
 
+  // Fisher-Yates selection: chọn ngẫu nhiên không trùng lặp bằng cách
+  // lấy phần tử random rồi xóa khỏi pool
   for (let i = 0; i < actualCount; i++) {
     const randomIndex = Math.floor(Math.random() * pool.length);
     result.push(pool[randomIndex]);
@@ -44,6 +57,7 @@ export function getRandomTips(options = {}) {
  * @returns {Array<{key: string, name: string, count: number}>}
  */
 export function getCategories() {
+  // Duyệt qua categoryNames, đếm số tips trong mỗi danh mục (Yêu cầu 5.2)
   return Object.entries(categoryNames).map(([key, name]) => ({
     key,
     name,
@@ -57,5 +71,6 @@ export function getCategories() {
  * @returns {boolean}
  */
 export function isValidCategory(category) {
+  // Kiểm tra key có tồn tại trong categoryNames (6 danh mục hợp lệ)
   return Object.hasOwn(categoryNames, category);
 }

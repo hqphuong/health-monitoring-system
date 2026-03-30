@@ -85,3 +85,15 @@ Module C cung cấp chức năng hiển thị các mẹo sức khỏe ngẫu nhi
 
 1. IF một lỗi không mong muốn xảy ra trong quá trình xử lý, THEN THE Health_Tips_Controller SHALL trả về mã lỗi 500 kèm thông báo `{ status: "error", message: <mô tả lỗi> }` nhất quán với các controller hiện có
 2. THE Health_Tips_Controller SHALL không yêu cầu xác thực (authentication) cho các endpoint mẹo sức khỏe, vì đây là thông tin công khai
+
+### Yêu cầu 8: Tài liệu hóa mã nguồn
+
+**User Story:** Là một nhà phát triển, tôi muốn mã nguồn có comment giải thích đầy đủ, để dễ dàng hiểu và bảo trì module sau này.
+
+#### Tiêu chí chấp nhận
+
+1. THE Health_Tips_Service SHALL có JSDoc comment cho mỗi hàm export, bao gồm mô tả chức năng, tham số (@param), và giá trị trả về (@returns)
+2. THE Health_Tips_Controller SHALL có JSDoc comment cho mỗi handler, bao gồm mô tả endpoint (method + path), query parameters, các response format (200/400/500), và tham chiếu đến yêu cầu liên quan
+3. THE Health_Tips_Routes SHALL có file-level comment mô tả tổng quan các route, base path, và lý do không sử dụng middleware xác thực
+4. Mỗi file source code trong module SHALL có comment inline giải thích logic quan trọng, đặc biệt tại các điểm: validation, xử lý lỗi, và thuật toán chọn ngẫu nhiên
+5. THE Health_Tips_Data_Store SHALL có file-level comment mô tả mục đích, cấu trúc dữ liệu, và tính tương thích với Prisma schema
