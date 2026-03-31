@@ -1,0 +1,74 @@
+tags:
+  - name: HealthMetrics
+    description: Quản lý và đồng bộ dữ liệu chỉ số sức khỏe
+
+paths:
+  /metrics/sync:
+    post:
+      summary: Đồng bộ dữ liệu sức khỏe từ thiết bị (Bulk Insert)
+      description: Nhận danh sách dữ liệu sinh lý từ thiết bị đeo. Phân tích mức độ cảnh báo (NORMAL, WARNING, SOS).
+      tags: [HealthMetrics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_id
+                - metrics
+              properties:
+                device_id:
+                  type: string
+                  example: "hw_mac_cd34"
+                metrics:
+                  type: array
+                  minItems: 1
+                  description: "Mảng chứa các bản ghi sức khỏe."
+                  items:
+                    type: object
+                    required:
+                      - record_time
+                    properties:
+                      record_time:
+                        type: string
+                        format: date-time
+                        example: "2026-03-30T06:40:00Z"
+                      heart_rate:
+                        type: integer
+                        example: 180
+                      steps:
+                        type: integer
+                        example: 0
+                      sleep_duration:
+                        type: integer
+                        example: 420
+                        nullable: true
+                      stress_level:
+                        type: integer
+                        example: 18
+                      raw_data:
+                        type: object
+                        nullable: true
+                        example: { "spo2": 98 }
+      responses:
+        201:
+          description: Đồng bộ dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  message: "Đã đồng bộ 2 bản ghi."
+                  alert:
+                    level: "SOS"
+                    message: "Cảnh báo: Nhịp tim cao bất thường!"
+        400:
+          description: Dữ liệu payload gửi lên không hợp lệ
+        401:
+          description: Thiếu Token hoặc Token đã hết hạn
+        500:
+          description: Lỗi hệ thống máy chủ

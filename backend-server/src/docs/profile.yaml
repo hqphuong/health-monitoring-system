@@ -25,9 +25,8 @@ paths:
               type: object
               properties:
                 height:
-                  type: number
-                  format: float
-                  example: 175.5
+                  type: integer
+                  example: 180
                   nullable: true
                 weight:
                   type: number
@@ -35,23 +34,23 @@ paths:
                   example: 68.5
                   nullable: true
                 gender:
-                  type: string
-                  example: "Nam"
+                  type: boolean
+                  example: true
                   nullable: true
                 birth:
                   type: string
-                  format: date
-                  example: "1998-05-20"
+                  format: date-time
+                  example: "2000-01-01T00:00:00.000Z"
                   nullable: true
                 systolic_bp:
                   type: integer
                   description: Huyết áp tâm thu
-                  example: 120
+                  example: null
                   nullable: true
                 diastolic_bp:
                   type: integer
                   description: Huyết áp tâm trương
-                  example: 80
+                  example: null
                   nullable: true
       responses:
         200:
