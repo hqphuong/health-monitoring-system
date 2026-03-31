@@ -1,0 +1,261 @@
+tags:
+  - name: Health Tips
+    description: API công khai cung cấp mẹo sức khỏe bằng tiếng Việt
+
+paths:
+  /health-tips:
+    get:
+      summary: Lấy toàn bộ mẹo sức khỏe
+      description: Trả về danh sách tất cả mẹo sức khỏe. Hỗ trợ lọc theo danh mục qua query parameter.
+      tags: [Health Tips]
+      security: []
+      parameters:
+        - in: query
+          name: category
+          required: false
+          description: "Lọc theo danh mục. Giá trị hợp lệ: sleep, heart, nutrition, exercise, stress, general"
+          schema:
+            type: string
+            enum: [sleep, heart, nutrition, exercise, stress, general]
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  count:
+                    type: integer
+                    example: 18
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HealthTip'
+              example:
+                status: "success"
+                count: 3
+                data:
+                  - id: "tip_001"
+                    title: "Ngủ đủ 7-8 tiếng mỗi đêm"
+                    content: "Giấc ngủ đủ giấc giúp cơ thể phục hồi, tăng cường hệ miễn dịch và cải thiện khả năng tập trung."
+                    category: "sleep"
+                    tags: ["sleep_duration"]
+                    source: "WHO"
+                    relatedMetrics: ["sleep_duration", "stress_level"]
+                  - id: "tip_004"
+                    title: "Theo dõi nhịp tim thường xuyên"
+                    content: "Nhịp tim nghỉ ngơi bình thường từ 60-100 nhịp/phút."
+                    category: "heart"
+                    tags: ["heart_rate", "hrv"]
+                    source: "American Heart Association"
+                    relatedMetrics: ["heart_rate"]
+                  - id: "tip_010"
+                    title: "Đi bộ ít nhất 10.000 bước mỗi ngày"
+                    content: "Đi bộ là hình thức vận động đơn giản nhưng hiệu quả."
+                    category: "exercise"
+                    tags: ["steps", "heart_rate"]
+                    source: "CDC"
+                    relatedMetrics: ["steps", "heart_rate"]
+        400:
+          description: Danh mục không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Danh mục 'invalid' không hợp lệ. Các danh mục hợp lệ: sleep, heart, nutrition, exercise, stress, general"
+        500:
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Internal server error"
+
+  /health-tips/random:
+    get:
+      summary: Lấy mẹo sức khỏe ngẫu nhiên
+      description: Trả về mẹo sức khỏe ngẫu nhiên không trùng lặp. Hỗ trợ chỉ định số lượng và lọc theo danh mục.
+      tags: [Health Tips]
+      security: []
+      parameters:
+        - in: query
+          name: count
+          required: false
+          description: Số lượng mẹo ngẫu nhiên cần lấy (mặc định 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: category
+          required: false
+          description: "Lọc theo danh mục. Giá trị hợp lệ: sleep, heart, nutrition, exercise, stress, general"
+          schema:
+            type: string
+            enum: [sleep, heart, nutrition, exercise, stress, general]
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HealthTip'
+              example:
+                status: "success"
+                data:
+                  - id: "tip_013"
+                    title: "Thực hành hít thở sâu mỗi ngày"
+                    content: "Hít thở sâu 4-7-8 giúp kích hoạt hệ thần kinh phó giao cảm, giảm nhịp tim và mức độ căng thẳng."
+                    category: "stress"
+                    tags: ["stress_level", "heart_rate", "hrv"]
+                    source: "Harvard Health"
+                    relatedMetrics: ["stress_level", "heart_rate"]
+        400:
+          description: Tham số không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCount:
+                  summary: Count không hợp lệ
+                  value:
+                    status: "error"
+                    message: "Giá trị count phải là số nguyên dương"
+                invalidCategory:
+                  summary: Danh mục không hợp lệ
+                  value:
+                    status: "error"
+                    message: "Danh mục 'invalid' không hợp lệ. Các danh mục hợp lệ: sleep, heart, nutrition, exercise, stress, general"
+        500:
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Internal server error"
+
+  /health-tips/categories:
+    get:
+      summary: Lấy danh sách danh mục mẹo sức khỏe
+      description: Trả về tất cả danh mục có sẵn kèm tên tiếng Việt và số lượng mẹo trong mỗi danh mục.
+      tags: [Health Tips]
+      security: []
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+              example:
+                status: "success"
+                data:
+                  - key: "sleep"
+                    name: "Giấc ngủ"
+                    count: 3
+                  - key: "heart"
+                    name: "Tim mạch"
+                    count: 3
+                  - key: "nutrition"
+                    name: "Dinh dưỡng"
+                    count: 3
+                  - key: "exercise"
+                    name: "Vận động"
+                    count: 3
+                  - key: "stress"
+                    name: "Căng thẳng"
+                    count: 3
+                  - key: "general"
+                    name: "Tổng quát"
+                    count: 3
+        500:
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Internal server error"
+
+components:
+  schemas:
+    HealthTip:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "tip_001"
+        title:
+          type: string
+          example: "Ngủ đủ 7-8 tiếng mỗi đêm"
+        content:
+          type: string
+          example: "Giấc ngủ đủ giấc giúp cơ thể phục hồi, tăng cường hệ miễn dịch."
+        category:
+          type: string
+          enum: [sleep, heart, nutrition, exercise, stress, general]
+          example: "sleep"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["sleep_duration"]
+        source:
+          type: string
+          example: "WHO"
+        relatedMetrics:
+          type: array
+          items:
+            type: string
+          example: ["sleep_duration", "stress_level"]
+
+    Category:
+      type: object
+      properties:
+        key:
+          type: string
+          example: "sleep"
+        name:
+          type: string
+          example: "Giấc ngủ"
+        count:
+          type: integer
+          example: 3
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Mô tả lỗi"

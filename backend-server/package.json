@@ -2,14 +2,15 @@
   "name": "backend-server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest --run",
+    "dev": "node --env-file=.env src/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.6.0",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "prisma": "^7.6.0"
+    "prisma": "^7.6.0",
+    "vitest": "^4.1.2"
   }
 }
