@@ -110,3 +110,43 @@ export const syncHealthData = async (req, res) => {
     }
 };
 
+
+export const getHealthMetrics = async (req, res) => {
+    try {
+        const currentUserId = req.user.user_id; 
+        
+        // 1. Nhận các tham số lọc từ Query String (URL)
+        // Ví dụ: /api/v1/metrics?days=7&limit=100
+        const days = parseInt(req.query.days) || 7; // Mặc định lấy dữ liệu 7 ngày qua
+        const limit = parseInt(req.query.limit) || 50; // Mặc định chỉ trả về 50 dòng mới nhất
+
+        // 2. Tính toán mốc thời gian bắt đầu quét
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        // 3. Truy xuất Database
+        const metrics = await prisma.healthMetric.findMany({
+            where: {
+                user_id: currentUserId,
+                record_time: {
+                    gte: startDate // Lớn hơn hoặc bằng mốc thời gian (Greater than or equal)
+                }
+            },
+            orderBy: {
+                record_time: 'desc' // Sắp xếp giảm dần: Mới nhất nằm trên cùng
+            },
+            take: limit // Giới hạn số lượng trả về
+        });
+
+        // 4. Trả kết quả về cho App
+        return res.status(200).json({ 
+            status: "success", 
+            message: `Lấy thành công ${metrics.length} bản ghi trong ${days} ngày qua.`,
+            data: metrics 
+        });
+
+    } catch (error) {
+        console.error(">>> LỖI GET METRICS:", error);
+        return res.status(500).json({ status: "error", message: error.message });
+    }
+};
