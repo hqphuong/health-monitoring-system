@@ -3,7 +3,7 @@ tags:
     description: Quản lý và đồng bộ dữ liệu chỉ số sức khỏe
 
 paths:
-  /metrics/sync:
+  /metrics/:
     post:
       summary: Đồng bộ dữ liệu sức khỏe từ thiết bị (Bulk Insert)
       description: Nhận danh sách dữ liệu sinh lý từ thiết bị đeo. Phân tích mức độ cảnh báo (NORMAL, WARNING, SOS).
@@ -68,6 +68,51 @@ paths:
                     message: "Cảnh báo: Nhịp tim cao bất thường!"
         400:
           description: Dữ liệu payload gửi lên không hợp lệ
+        401:
+          description: Thiếu Token hoặc Token đã hết hạn
+        500:
+          description: Lỗi hệ thống máy chủ
+  /metrics:
+    get:
+      summary: Lấy lịch sử dữ liệu sức khỏe (Dashboard)
+      description: Truy xuất danh sách các chỉ số sức khỏe của User hiện tại để vẽ biểu đồ hoặc xem lịch sử. Hỗ trợ lọc theo số ngày và giới hạn số lượng bản ghi để tối ưu hiệu năng.
+      tags: [HealthMetrics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 7
+          description: "Số ngày muốn lấy dữ liệu tính từ hiện tại (Ví dụ: 1 = hôm nay, 7 = tuần qua, 30 = tháng qua)"
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: "Giới hạn số lượng bản ghi trả về (Tránh treo App)"
+      responses:
+        200:
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  message: "Lấy thành công 50 bản ghi trong 7 ngày qua."
+                  data:
+                    - record_time: "2026-04-03T09:10:00Z"
+                      heart_rate: 75
+                      steps: 2300
+                      sleep_duration: null
+                      stress_level: 20
+                    - record_time: "2026-04-03T09:05:00Z"
+                      heart_rate: 78
+                      steps: 2250
+                      sleep_duration: null
+                      stress_level: 22
         401:
           description: Thiếu Token hoặc Token đã hết hạn
         500:

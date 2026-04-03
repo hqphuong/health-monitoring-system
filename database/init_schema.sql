@@ -6,9 +6,10 @@
 CREATE TABLE "user" (
     user_id VARCHAR(50) PRIMARY KEY,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(100),
+    full_name VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+);  
 
 -- 2. Bảng HEALTH_PROFILE (Hồ sơ sức khỏe - Quan hệ 1-1 với User)
 CREATE TABLE health_profile (
@@ -16,7 +17,7 @@ CREATE TABLE health_profile (
     user_id VARCHAR(50) UNIQUE NOT NULL REFERENCES "user"(user_id) ON DELETE CASCADE, -- UNIQUE đảm bảo quan hệ 1-1
     height FLOAT,
     weight FLOAT,
-    gender VARCHAR(10),
+    gender BOOLEAN,          -- TRUE = Nam, FALSE = Nữ
     birth DATE,
     systolic_bp INT,     -- Huyết áp tâm thu
     diastolic_bp INT,    -- Huyết áp tâm trương
