@@ -101,18 +101,34 @@ paths:
                 type: object
                 example:
                   status: "success"
-                  message: "Lấy thành công 50 bản ghi trong 7 ngày qua."
+                  message: "Lấy thành công 46 bản ghi trong 7 ngày qua."
                   data:
-                    - record_time: "2026-04-03T09:10:00Z"
-                      heart_rate: 75
-                      steps: 2300
-                      sleep_duration: null
-                      stress_level: 20
-                    - record_time: "2026-04-03T09:05:00Z"
-                      heart_rate: 78
-                      steps: 2250
+                    - health_id: "a5241d0c-4e28-4be5-ae84-1a3ec9ec3d1a"
+                      user_id: "6b13d3c9-d213-4422-b039-e33cca967fe5"
+                      work_id: null
+                      record_time: "2026-03-30T06:45:00.000Z"
+                      heart_rate: 60
+                      steps: 165
                       sleep_duration: null
                       stress_level: 22
+                      raw_data:
+                        steps: 165
+                        heart_rate: 60
+                        record_time: "2026-03-30T06:45:00Z"
+                        stress_level: 22
+                    - health_id: "17e1c4b6-e9a1-4c5c-92c4-01ff2024b60d"
+                      user_id: "6b13d3c9-d213-4422-b039-e33cca967fe5"
+                      work_id: null
+                      record_time: "2026-03-30T06:45:00.000Z"
+                      heart_rate: 60
+                      steps: 165
+                      sleep_duration: null
+                      stress_level: 22
+                      raw_data:
+                        steps: 165
+                        heart_rate: 60
+                        record_time: "2026-03-30T06:45:00Z"
+                        stress_level: 22
         401:
           description: Thiếu Token hoặc Token đã hết hạn
         500:
