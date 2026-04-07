@@ -98,7 +98,8 @@ export interface LoginResponse {
 export interface RegisterPayload {
   email: string;
   password: string;
-  name?: string;
+  confirm_password?: string;
+  full_name?: string;
 }
 
 export interface RegisterResponse {
@@ -243,7 +244,7 @@ async function fetchAPI<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-  
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
 
@@ -252,14 +253,14 @@ async function fetchAPI<T>(
     'Content-Type': 'application/json',
     ...options.headers,
   };
-  
+
   if (cachedToken) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${cachedToken}`;
   }
 
   try {
     console.log(`🌐 [API] ${options.method || 'GET'} ${url}`);
-    
+
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
@@ -278,7 +279,7 @@ async function fetchAPI<T>(
     return data;
   } catch (error) {
     clearTimeout(timeoutId);
-    
+
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         console.error('⏱️ [API] Timeout - Server có thể đang khởi động...');
@@ -343,7 +344,7 @@ export const api = {
   // ==================
   // HEALTH METRICS (Dashboard & Sync)
   // ==================
-  
+
   /**
    * Lấy lịch sử dữ liệu sức khỏe cho Dashboard
    * @param params - startDate, endDate (optional)
@@ -375,11 +376,11 @@ export const api = {
     try {
       // Thử dùng metrics API mới
       const metricsResponse = await api.getMetrics();
-      
+
       if (metricsResponse.metrics && metricsResponse.metrics.length > 0) {
         const latestMetric = metricsResponse.metrics[0];
         const summary = metricsResponse.summary;
-        
+
         return {
           heartRate: {
             current: latestMetric.heart_rate || 0,
@@ -414,7 +415,7 @@ export const api = {
           },
         };
       }
-      
+
       throw new Error('No metrics data');
     } catch {
       // Fallback: thử Legacy health-data API
@@ -515,8 +516,8 @@ export const api = {
   // ==================
   // ALERTS (Lịch sử cảnh báo)
   // ==================
-  getAlerts: (): Promise<{status: string; message: string; data: AlertLogResponse[]}> =>
-    fetchAPI<{status: string; message: string; data: AlertLogResponse[]}>(ENDPOINTS.ALERTS),
+  getAlerts: (): Promise<{ status: string; message: string; data: AlertLogResponse[] }> =>
+    fetchAPI<{ status: string; message: string; data: AlertLogResponse[] }>(ENDPOINTS.ALERTS),
 
   // ==================
   // HEALTH TIPS (Mẹo sức khỏe)

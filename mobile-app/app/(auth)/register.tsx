@@ -69,6 +69,8 @@ export default function RegisterScreen() {
       const response = await api.register({
         email: email.trim(),
         password: password,
+        confirm_password: confirmPassword,
+        full_name: "Người dùng mới",
       });
 
       console.log('✅ Register response:', response);
@@ -81,7 +83,7 @@ export default function RegisterScreen() {
     } catch (error) {
       console.error('❌ Register error:', error);
       const message = error instanceof Error ? error.message : 'Đăng ký thất bại';
-      
+
       // Xử lý các lỗi cụ thể từ API
       if (message.includes('409') || message.toLowerCase().includes('exist')) {
         Alert.alert('Lỗi', 'Email này đã được đăng ký. Vui lòng sử dụng email khác.');
@@ -228,7 +230,7 @@ export default function RegisterScreen() {
             <Button
               title="Tiếp tục với Google"
               variant="outline"
-              onPress={() => {}}
+              onPress={() => { }}
               size="lg"
             />
           </View>
