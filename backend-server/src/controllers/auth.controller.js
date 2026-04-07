@@ -133,7 +133,7 @@ export const registerUser = async (req, res) => {
 
   } catch (error) {
     console.error("Lỗi đăng ký:", error);
-    return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
+    return res.status(500).json({ status: "error", message: "Lỗi máy chủ: " + error.message });
   }
 };
 
