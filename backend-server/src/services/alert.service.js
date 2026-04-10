@@ -108,3 +108,18 @@ export const evaluateHealthData = (metric, userAge = 25, isResting = true) => {
         message: "Các chỉ số cơ thể đang ở trạng thái an toàn." 
     };
 };
+
+export const processAdvancedAlert = async (userId, workId, latestMetric, aiResult) => {
+    const medicalEval = evaluateHealthData(latestMetric);
+    
+    let finalDecision = medicalEval;
+    
+    if (aiResult.risk_score > 0.85 && medicalEval.level !== "SOS") {
+        finalDecision = {
+            level: "WARNING",
+            message: `AI phát hiện nhịp tim bất thường (Rủi ro: ${Math.round(aiResult.risk_score * 100)}%). Hãy nghỉ ngơi!`
+        };
+    }
+
+    return finalDecision;
+};
