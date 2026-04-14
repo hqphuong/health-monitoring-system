@@ -1,146 +1,114 @@
 import prisma from '../lib/prisma.js';
-import { evaluateHealthData } from '../services/alert.service.js';
 
+/**
+ * 1. ĐỒNG BỘ DỮ LIỆU THỰC TỪ APP
+ */
 export const syncHealthData = async (req, res) => {
     try {
-        const { metrics } = req.body;
-        const currentUserId = req.user.user_id; 
+        const { data } = req.body; 
+        const currentUserId = req.user.user_id;
 
-        // 1. KIỂM TRA PAYLOAD
-        if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
-            return res.status(400).json({ status: "error", message: "Payload không hợp lệ." });
+        console.log(`\n--- [SYNC] Nhận ${data?.length || 0} bản ghi từ Flutter ---`);
+
+        if (!data || !Array.isArray(data)) {
+            return res.status(400).json({ status: "error", message: "Dữ liệu không hợp lệ." });
         }
 
-        // 2. Bỏ qua kiểm tra device - cho phép sync từ Health Connect trực tiếp
-
-        // 3. FORMAT DỮ LIỆU ĐẦU VÀO (Khởi tạo dataToInsert ở đây)
-        const dataToInsert = metrics.map((m) => ({
+        const dataToInsert = data.map((item) => ({
             user_id: currentUserId,
-            record_time: new Date(m.record_time), 
-            heart_rate: m.heart_rate || null,
-            steps: m.steps || null,
-            sleep_duration: m.sleep_duration || null,
-            stress_level: m.stress_level || null,
-            raw_data: m 
+            record_time: new Date(item.time),
+            heart_rate: item.type === 'HEART_RATE' ? Math.round(parseFloat(item.value)) : null,
+            steps: item.type === 'STEPS' ? parseInt(item.value) : null,
+            sleep_duration: item.type === 'SLEEP_ASLEEP' ? parseInt(item.value) : null,
+            raw_data: item 
         }));
 
-        // 4. BULK INSERT VÀO DATABASE
-        await prisma.healthMetric.createMany({ data: dataToInsert });
-
-        // 5. ĐÁNH GIÁ DỮ LIỆU VÀ KÍCH HOẠT CẢNH BÁO
-        // 5.1 Lấy bản ghi mới nhất để đánh giá 
-        const latestMetric = dataToInsert[dataToInsert.length - 1]; 
-
-        // Lấy thông tin ngày sinh để tính tuổi
-        const userProfile = await prisma.healthProfile.findFirst({
-            where: { user_id: currentUserId }
+        // Sử dụng createMany và skipDuplicates để tránh lỗi nếu sync trùng record_time
+        const result = await prisma.healthMetric.createMany({
+            data: dataToInsert,
+            skipDuplicates: true
         });
 
-        // Tính tuổi thực tế
-        let userAge = 25; // Tuổi mặc định
-        if (userProfile && userProfile.birth) {
-            const birthYear = new Date(userProfile.birth).getFullYear();
-            const currentYear = new Date().getFullYear();
-            userAge = currentYear - birthYear;
-        }
-
-        let finalAlert = { level: "NORMAL", message: "Các chỉ số cơ thể đang ở trạng thái an toàn." };
-        let hasSOS = false;
-
-        // 5.3 QUÉT TOÀN BỘ BẢN GHI TRONG MẢNG 
-        for (const metric of dataToInsert) {
-            const isResting = (!metric.steps || metric.steps < 50);
-            
-            // Khám từng bản ghi một
-            const evaluation = evaluateHealthData(metric, userAge, isResting);
-            // Nâng cấp mức độ cảnh báo nếu phát hiện nguy hiểm (SOS ưu tiên cao nhất)
-            if (evaluation.level === "SOS") {
-                finalAlert = evaluation; // Lấy lời nguyền của SOS
-                hasSOS = true;
-                break; 
-            } 
-            else if (evaluation.level === "WARNING" && finalAlert.level !== "SOS") {
-                // Nếu chỉ là Warning, thì ghi nhận lại, nhưng vẫn khám tiếp xem ở dưới có SOS không
-                finalAlert = evaluation; 
-            }
-        }
-
-        let emergencyContacts = []; // Khởi tạo mảng chứa số điện thoại
-
-        if (hasSOS) {
-
-            // Rút danh sách Người liên hệ (Relative) từ Database
-            const relatives = await prisma.relative.findMany({
-                where: { user_id: currentUserId }
-            });
-
-            // Lấy ra danh sách các số điện thoại
-            emergencyContacts = relatives.map(r => r.phone_num);
-
-            // Ghi chép sự kiện vào sổ Nam Tào (Bảng Alert_Log)
-            await prisma.alertLog.create({
-                data: {
-                    user_id: currentUserId,
-                    type: "SOS_HEART_RATE",
-                    trigger_heart_rate: latestMetric.heart_rate || 0,
-                    is_sos_sent: true, 
-                    alert_time: new Date()
-                }
-            });
-        }
-
-        // 6. TRẢ KẾT QUẢ VỀ CHO APP 
-        return res.status(201).json({ 
-            status: "success", 
-            message: `Đã đồng bộ dữ liệu.`,
-            alert: finalAlert,
-            // Nếu là NORMAL/WARNING thì mảng này rỗng, nếu SOS thì có số điện thoại
-            emergency_contacts: emergencyContacts 
-        });
+        console.log(`✅ Đã lưu mới thành công ${result.count} bản ghi.`);
+        return res.status(201).json({ status: "success", count: result.count });
 
     } catch (error) {
-        console.error(">>> LỖI SYNC DATA:", error);
+        console.error("❌ Lỗi Sync:", error.message);
         return res.status(500).json({ status: "error", message: error.message });
     }
 };
 
-
+/**
+ * 2. LẤY DỮ LIỆU LÀM BIỂU ĐỒ (Hỗ trợ Gom nhóm)
+ */
 export const getHealthMetrics = async (req, res) => {
     try {
-        const currentUserId = req.user.user_id; 
-        
-        // 1. Nhận các tham số lọc từ Query String (URL)
-        // Ví dụ: /api/v1/metrics?days=7&limit=100
-        const days = parseInt(req.query.days) || 7; // Mặc định lấy dữ liệu 7 ngày qua
-        const limit = parseInt(req.query.limit) || 50; // Mặc định chỉ trả về 50 dòng mới nhất
-
-        // 2. Tính toán mốc thời gian bắt đầu quét
+        const currentUserId = req.user.user_id;
+        const days = parseInt(req.query.days) || 30; 
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
-        // 3. Truy xuất Database
+        // Lấy dữ liệu thô
         const metrics = await prisma.healthMetric.findMany({
             where: {
                 user_id: currentUserId,
-                record_time: {
-                    gte: startDate // Lớn hơn hoặc bằng mốc thời gian (Greater than or equal)
-                }
+                record_time: { gte: startDate }
             },
-            orderBy: {
-                record_time: 'desc' // Sắp xếp giảm dần: Mới nhất nằm trên cùng
-            },
-            take: limit // Giới hạn số lượng trả về
+            orderBy: { record_time: 'asc' }
         });
 
-        // 4. Trả kết quả về cho App
-        return res.status(200).json({ 
-            status: "success", 
-            message: `Lấy thành công ${metrics.length} bản ghi trong ${days} ngày qua.`,
-            data: metrics 
-        });
+        // --- LOG PHÂN TÍCH ---
+        console.log("\n--- [GET CHART DATA] ---");
+        console.log(`✅ Đọc được ${metrics.length} bản ghi.`);
 
+        // Gom nhóm theo ngày để Console Log xem có đủ cột làm biểu đồ không
+        const dailySummary = metrics.reduce((acc, curr) => {
+            const date = curr.record_time.toISOString().split('T')[0];
+            if (!acc[date]) acc[date] = { steps: 0, hr_points: 0 };
+            if (curr.steps) acc[date].steps += curr.steps;
+            if (curr.heart_rate) acc[date].hr_points += 1;
+            return acc;
+        }, {});
+
+        console.log("📅 Thống kê cột biểu đồ (Ngày: {Tổng bước, Số điểm nhịp tim}):");
+        console.log(dailySummary);
+
+        return res.status(200).json({
+            status: "success",
+            count: metrics.length,
+            daily_summary: dailySummary, // Trả thêm cái này cho frontend dễ vẽ
+            data: metrics
+        });
     } catch (error) {
-        console.error(">>> LỖI GET METRICS:", error);
         return res.status(500).json({ status: "error", message: error.message });
+    }
+};
+
+/**
+ * 3. HÀM TẠO DỮ LIỆU GIẢ (Để test biểu đồ ngay lập tức)
+ * Gọi API này 1 lần: GET /api/v1/metrics/seed-mock
+ */
+export const seedMockData = async (req, res) => {
+    try {
+        const currentUserId = req.user.user_id;
+        const mockData = [];
+        
+        for (let i = 0; i < 30; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            
+            mockData.push({
+                user_id: currentUserId,
+                record_time: date,
+                heart_rate: Math.floor(Math.random() * (90 - 60 + 1)) + 60,
+                steps: Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000,
+                raw_data: { info: "Dữ liệu giả lập để test biểu đồ" }
+            });
+        }
+
+        await prisma.healthMetric.createMany({ data: mockData });
+        res.status(201).json({ message: "Đã tạo 30 ngày dữ liệu giả thành công!" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };

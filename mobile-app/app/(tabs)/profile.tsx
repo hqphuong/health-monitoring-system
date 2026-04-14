@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,9 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  Image,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router'; // Thêm useFocusEffect
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Colors';
 import { removeToken } from '../../services/auth';
@@ -32,30 +31,34 @@ type MenuItem = {
 };
 
 export default function ProfileScreen() {
-  const { profile, loading } = useProfile();
+  const { profile, loading, refresh } = useProfile();
   const [relativesCount, setRelativesCount] = useState<number>(0);
 
-  // Lấy số lượng liên hệ khẩn cấp thực tế
-  useEffect(() => {
-    const fetchRelativesCount = async () => {
-      try {
-        const relatives = await api.getRelatives();
-        const list = Array.isArray(relatives) ? relatives : [];
-        setRelativesCount(list.length);
-      } catch {
-        setRelativesCount(0);
-      }
-    };
-    fetchRelativesCount();
-  }, []);
+  // Hàm lấy số lượng liên hệ khẩn cấp
+  const fetchRelativesCount = async () => {
+    try {
+      const relatives = await api.getRelatives();
+      const list = Array.isArray(relatives) ? relatives : [];
+      setRelativesCount(list.length);
+    } catch {
+      setRelativesCount(0);
+    }
+  };
+
+  // Tự động làm mới dữ liệu mỗi khi màn hình Profile được hiển thị (Focus)
+  useFocusEffect(
+    useCallback(() => {
+      refresh(); // Cập nhật chỉ số sức khỏe mới nhất từ Backend
+      fetchRelativesCount(); // Cập nhật số lượng người thân
+    }, [refresh])
+  );
 
   const menuItems: MenuItem[][] = [
-    // Health Section
     [
       {
         id: 'edit-profile',
         title: 'Thông tin sức khỏe',
-        subtitle: 'Chiều cao, cân nặng, tuổi',
+        subtitle: 'Chiều cao, cân nặng, BMI',
         icon: 'body',
         iconColor: Colors.primary.main,
         iconBg: Colors.status.infoLight,
@@ -81,7 +84,6 @@ export default function ProfileScreen() {
         onPress: () => Alert.alert('Thông báo', 'Tính năng đang được phát triển'),
       },
     ],
-    // App Settings
     [
       {
         id: 'notifications',
@@ -110,7 +112,6 @@ export default function ProfileScreen() {
         iconBg: Colors.status.infoLight,
       },
     ],
-    // Support
     [
       {
         id: 'help',
@@ -141,16 +142,11 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Xóa token khỏi secure storage
               await removeToken();
-              // Clear cache token trong api service
               setAuthToken(null);
-              // Cập nhật global auth state
               setIsAuthenticated(false);
-              // Navigate to login
               router.replace('/(auth)/login');
             } catch (error) {
-              console.error('Logout error:', error);
               setAuthToken(null);
               setIsAuthenticated(false);
               router.replace('/(auth)/login');
@@ -198,7 +194,6 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
-  // Loading state
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -232,7 +227,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.userName}>{profile.name || 'Chưa cập nhật'}</Text>
+          <Text style={styles.userName}>{profile.name || 'Người dùng'}</Text>
           <Text style={styles.userEmail}>{profile.email || ''}</Text>
 
           <View style={styles.memberBadge}>
@@ -250,19 +245,32 @@ export default function ProfileScreen() {
               <Text style={styles.healthStatUnit}>cm</Text>
               <Text style={styles.healthStatLabel}>Chiều cao</Text>
             </View>
+            
             <View style={styles.healthStatDivider} />
+            
             <View style={styles.healthStat}>
               <Text style={styles.healthStatValue}>{profile.weight ?? '--'}</Text>
               <Text style={styles.healthStatUnit}>kg</Text>
               <Text style={styles.healthStatLabel}>Cân nặng</Text>
             </View>
+            
             <View style={styles.healthStatDivider} />
+            
             <View style={styles.healthStat}>
-              <Text style={[styles.healthStatValue, profile.bmiStatus && { color: profile.bmiStatus.color }]}>
+              <Text style={[
+                styles.healthStatValue, 
+                profile.bmiStatus && { color: profile.bmiStatus.color }
+              ]}>
                 {profile.bmi ?? '--'}
               </Text>
-              <Text style={[styles.healthStatUnit, profile.bmiStatus && { color: profile.bmiStatus.color }]}>BMI</Text>
-              <Text style={[styles.healthStatLabel, profile.bmiStatus && { color: profile.bmiStatus.color }]}>
+              <Text style={[
+                styles.healthStatUnit, 
+                profile.bmiStatus && { color: profile.bmiStatus.color }
+              ]}>BMI</Text>
+              <Text style={[
+                styles.healthStatLabel, 
+                profile.bmiStatus && { color: profile.bmiStatus.color, fontWeight: 'bold' }
+              ]}>
                 {profile.bmiStatus?.text || 'Chưa có'}
               </Text>
             </View>
@@ -272,7 +280,7 @@ export default function ProfileScreen() {
             style={styles.editHealthButton}
             onPress={() => router.push('/(profile)/edit')}
           >
-            <Text style={styles.editHealthText}>Cập nhật</Text>
+            <Text style={styles.editHealthText}>Cập nhật thông tin</Text>
             <Ionicons name="create-outline" size={16} color={Colors.primary.main} />
           </TouchableOpacity>
         </View>
@@ -292,7 +300,6 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
 
-        {/* Version */}
         <Text style={styles.versionText}>HealthGuard v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
