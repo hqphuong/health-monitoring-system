@@ -1,11 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-// ==========================================
-// CẤU HÌNH KẾT NỐI DATABASE
-// ==========================================
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,126 +6,102 @@ datasource db {
   provider = "postgresql"
 }
 
-// ==========================================
-// ĐỊNH NGHĨA CÁC BẢNG (MODELS)
-// ==========================================
-
-// 1. Bảng USER (Chỉ giữ thông tin định danh & bảo mật)
 model User {
-  user_id    String    @id @default(uuid()) @db.VarChar(50)
-  email      String    @unique @db.VarChar(100)
-  password   String?    @db.VarChar(100)
-  full_name       String    @db.VarChar(100)
-
-  reset_otp            String?   @db.VarChar(6)    // Lưu mã OTP 6 số (vd: "123456")
-  otp_expires_at       DateTime?                   // Thời gian hết hạn của OTP (vd: 5 phút)
-  
-  created_at DateTime? @default(now())
-
-  // Quan hệ 1-1 với HealthProfile
-  health_profile HealthProfile?
-
-  // Quan hệ 1-N
-  relatives        Relative[]
-  devices          Device[]
-  workout_sessions WorkoutSession[]
-  health_metrics   HealthMetric[]
+  user_id          String           @id @default(uuid()) @db.VarChar(50)
+  email            String           @unique @db.VarChar(100)
+  password         String?          @db.VarChar(100)
+  created_at       DateTime?        @default(now())
+  full_name        String           @db.VarChar(100)
+  otp_expires_at   DateTime?
+  reset_otp        String?          @db.VarChar(6)
   alert_logs       AlertLog[]
+  devices          Device[]
+  health_metrics   HealthMetric[]
+  health_profile   HealthProfile?
+  relatives        Relative[]
+  workout_sessions WorkoutSession[]
 
   @@map("user")
 }
 
-// 2. Bảng HEALTH_PROFILE (Tách ra từ User)
 model HealthProfile {
   profile_id   String    @id @default(uuid()) @db.VarChar(50)
-  user_id      String    @unique @db.VarChar(50) // Cực kỳ quan trọng: @unique tạo ra quan hệ 1-1
+  user_id      String    @unique @db.VarChar(50)
   height       Float?
   weight       Float?
-  gender       Boolean   
-  birth        DateTime @db.Date
-  systolic_bp  Int? // Huyết áp tâm thu
-  diastolic_bp Int? // Huyết áp tâm trương
-  updated_at   DateTime? @updatedAt // Tự động cập nhật thời gian khi sửa profile
-
-  // Liên kết ngược lại User, nếu User bị xóa -> xóa luôn Profile (Cascade)
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  birth        DateTime  @db.Date
+  systolic_bp  Int?
+  diastolic_bp Int?
+  updated_at   DateTime? @updatedAt
+  gender       Boolean
+  user         User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@map("health_profile")
 }
 
-// 3. Bảng RELATIVE (Người thân khẩn cấp)
 model Relative {
-  phone_num    String  @db.VarChar(20)
+  phone_num    String @db.VarChar(20)
   user_id      String @db.VarChar(50)
-  contact_name String  @db.VarChar(100)
+  contact_name String @db.VarChar(100)
   relationship String @db.VarChar(50)
-  relative_id  String  @id @default(uuid()) @db.VarChar(50)
-
-  user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  relative_id  String @id @default(uuid()) @db.VarChar(50)
+  user         User   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@map("relative")
 }
 
-// 4. Bảng DEVICE (Thiết bị/Nguồn dữ liệu)
 model Device {
-  device_id      String    @id @db.VarChar(50)
-  user_id        String?   @db.VarChar(50)
-  provider       String    @db.VarChar(50) // vd: 'health_connect', 'fitbit'
-  status         String?   @db.VarChar(20)
+  device_id      String   @id @db.VarChar(50)
+  user_id        String?  @db.VarChar(50)
+  provider       String   @db.VarChar(50)
+  status         String?  @db.VarChar(20)
   last_sync_time DateTime @default(now())
-
-  user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user           User?    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@map("device")
 }
 
-// 5. Bảng WORKOUT_SESSION (Buổi tập luyện)
 model WorkoutSession {
-  work_id        String    @id @default(uuid()) @db.VarChar(50)
-  user_id        String?   @db.VarChar(50)
+  work_id        String         @id @default(uuid()) @db.VarChar(50)
+  user_id        String?        @db.VarChar(50)
   start_time     DateTime
   end_time       DateTime?
   max_heart_rate Int?
   av_heart_rate  Int?
-  status         String?   @db.VarChar(20)
-
-  user           User?          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  health_metrics HealthMetric[]
+  status         String?        @db.VarChar(20)
   alert_logs     AlertLog[]
+  health_metrics HealthMetric[]
+  user           User?          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@map("workout_session")
 }
 
-// 6. Bảng HEALTH_METRIC (Kho chứa dữ liệu khổng lồ)
 model HealthMetric {
-  health_id      String   @id @default(uuid()) @db.VarChar(50)
-  user_id        String?  @db.VarChar(50)
-  work_id        String?  @db.VarChar(50)
-  record_time    DateTime
-  heart_rate     Int?
-  steps          Int?
-  sleep_duration Int? // Đơn vị: Phút
-  stress_level   Int?
-  raw_data       Json? // Dữ liệu JSON linh hoạt (SpO2, HRV...)
-
+  health_id       String          @id @default(uuid()) @db.VarChar(50)
+  user_id         String?         @db.VarChar(50)
+  work_id         String?         @db.VarChar(50)
+  record_time     DateTime
+  heart_rate      Int?
+  steps           Int?
+  sleep_duration  Int?
+  stress_level    Int?
+  raw_data        Json?
   user            User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id], onDelete: SetNull)
+  workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id])
 
   @@map("health_metric")
 }
 
-// 7. Bảng ALERT_LOG (Nhật ký cảnh báo)
 model AlertLog {
-  alert_id           String   @id @default(uuid()) @db.VarChar(50)
-  user_id            String?  @db.VarChar(50)
-  work_id            String?  @db.VarChar(50)
-  type               String   @db.VarChar(50)
+  alert_id           String          @id @default(uuid()) @db.VarChar(50)
+  user_id            String?         @db.VarChar(50)
+  work_id            String?         @db.VarChar(50)
+  type               String          @db.VarChar(50)
   trigger_heart_rate Int
   alert_time         DateTime
-  is_sos_sent        Boolean? @default(false)
-
-  user            User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id], onDelete: SetNull)
+  is_sos_sent        Boolean?        @default(false)
+  user               User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  workout_session    WorkoutSession? @relation(fields: [work_id], references: [work_id])
 
   @@map("alert_log")
 }

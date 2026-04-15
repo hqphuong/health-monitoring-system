@@ -1,0 +1,102 @@
+tags:
+  - name: Realtime
+    description: Realtime health monitoring via WebSocket (Module B)
+
+paths:
+  /realtime/session:
+    post:
+      summary: Khởi tạo phiên theo dõi realtime
+      tags: [Realtime]
+      description: |
+        API này mô phỏng sự kiện WebSocket "start_session".
+        Dùng để khởi tạo một phiên workout cho người dùng trước khi gửi dữ liệu.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                  example: test-user-1
+      responses:
+        200:
+          description: Session được tạo thành công
+
+  /realtime/metrics:
+    post:
+      summary: Gửi dữ liệu sức khỏe realtime
+      tags: [Realtime]
+      description: |
+        API này mô phỏng sự kiện WebSocket "stream_metric".
+        Trong thực tế hệ thống sử dụng Socket.IO để truyền dữ liệu realtime.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - metrics
+              properties:
+                user_id:
+                  type: string
+                  example: test-user-1
+                metrics:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      record_time:
+                        type: string
+                        example: 2026-04-10T10:00:00Z
+                      heart_rate:
+                        type: number
+                        example: 85
+                      steps:
+                        type: number
+                        example: 20
+                      stress_level:
+                        type: number
+                        example: 50
+      responses:
+        200:
+          description: Dữ liệu được xử lý realtime
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ai_risk:
+                    type: number
+                    example: 0.7
+                  trend:
+                    type: number
+                    example: 0.6
+                  status:
+                    type: string
+                    example: WARNING
+                  reasons:
+                    type: array
+                    items:
+                      type: string
+
+  /realtime/health:
+    get:
+      summary: Kiểm tra trạng thái realtime service
+      tags: [Realtime]
+      responses:
+        200:
+          description: Service hoạt động bình thường
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
