@@ -1,5 +1,5 @@
 import express from 'express';
-import http from 'http';
+import http from 'node:http';
 import { Server } from 'socket.io';
 import prisma from './lib/prisma.js';
 import { pushToQueue } from './queue.js';
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
 
     socket.on('stream_metric', async (payload) => {
 
-        const { user_id, metrics } = payload;
+        const { metrics } = payload;
 
         for (const metric of metrics) {
 

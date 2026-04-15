@@ -33,6 +33,11 @@ paths:
       description: |
         API này mô phỏng sự kiện WebSocket "stream_metric".
         Trong thực tế hệ thống sử dụng Socket.IO để truyền dữ liệu realtime.
+        Event flow thực tế:
+          - Client emit: "stream_metric"
+          - Server emit lại:
+              + "metric_update"
+              + "emergency_alert"
       requestBody:
         required: true
         content:

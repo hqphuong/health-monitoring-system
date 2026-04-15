@@ -15,6 +15,5 @@ router.use('/devices', deviceRoutes);
 router.use('/health-tips', healthTipsRoutes); // Module C: /api/v1/health-tips/*
 router.use('/metrics', metricRoutes);
 
-// router.use('/internal/alerts', internalRoutes); 
 
 export default router;
