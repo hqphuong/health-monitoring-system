@@ -80,14 +80,21 @@ model WorkoutSession {
 }
 
 model HealthMetric {
-  health_id       String          @id @default(uuid()) @db.VarChar(50)
-  user_id         String?         @db.VarChar(50)
-  work_id         String?         @db.VarChar(50)
-  record_time     DateTime
-  heart_rate      Int?
-  steps           Int?
-  sleep_duration  Int?
-  stress_level    Int?
+  health_id      String          @id @default(uuid()) @db.VarChar(50)
+  user_id        String?         @db.VarChar(50)
+  work_id        String?         @db.VarChar(50)
+  record_time    DateTime
+  heart_rate     Int?
+  steps          Int?
+  sleep_duration Int?
+  stress_level   Int?
+  
+  // --- CÁC TRƯỜNG BỔ SUNG ĐỂ ĐỒNG BỘ HEALTH CONNECT ---
+  blood_oxygen   Float?          // Lưu SpO2 (%)
+  calories       Float?          // Lưu năng lượng tiêu thụ (kcal)
+  distance       Float?          // Lưu quãng đường (meters)
+  // ---------------------------------------------------
+
   raw_data        Json?
   user            User?           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   workout_session WorkoutSession? @relation(fields: [work_id], references: [work_id])

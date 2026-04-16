@@ -11,21 +11,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { initialize, requestPermission, readRecords } from 'react-native-health-connect';
 
-// Import Constants & Hooks
+// Import Constants & Services
 import { Colors } from '../../constants/Colors';
 import { useHealthData } from '../../hooks/useHealthData';
-import { useHealthConnect } from '../../hooks/useHealthConnect'; // Hook bạn đã cung cấp
 import { getUserData } from '../../services/auth';
 import { useHealthTips } from '../../hooks/useHealthTips';
+import api from '../../services/api';
 
 // Import styles
 import { styles } from './index.styles';
 
-// Interface cho dữ liệu hiển thị (từ Server)
 interface HealthRecord {
-  user_id: string;
-  record_time: string | Date;
+  record_time: string;
   heart_rate: number | null;
   steps: number | null;
   blood_oxygen: number | null;
@@ -39,50 +38,106 @@ type TimeRange = 'day' | 'week' | 'month';
 export default function HomeScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [userName, setUserName] = useState<string>('');
-  
-  // 1. Hook lấy dữ liệu từ Server để hiển thị lên UI
-  const healthDataHook = useHealthData();
-  
-  // 2. Hook kết nối với Google Health Connect (để đẩy dữ bộ)
-  const { 
-    refreshData, 
-    syncToServer, 
-    loading: isSyncing, 
-    isAvailable,
-    error: syncError 
-  } = useHealthConnect();
+  const [isSyncing, setIsSyncing] = useState(false);
 
+  const { data: serverDataRaw, loading: isTableLoading, refresh: refreshFromServer } = useHealthData();
   const { randomTip } = useHealthTips();
 
-  // Ép kiểu dữ liệu từ Server
+  // 1. Chuyển đổi dữ liệu từ Server sang mảng chuẩn
   const serverData = useMemo(() => {
-    const raw = healthDataHook?.data;
-    return Array.isArray(raw) ? (raw as unknown as HealthRecord[]) : [];
-  }, [healthDataHook?.data]);
+    return Array.isArray(serverDataRaw) ? (serverDataRaw as unknown as HealthRecord[]) : [];
+  }, [serverDataRaw]);
 
-  // 3. Logic xử lý làm mới (Refresh): Quan trọng nhất
-  const onRefresh = useCallback(async () => {
+  // 2. LOGIC CHÍNH: QUÉT, GỘP VÀ ĐỒNG BỘ
+  const handleSyncHealthConnect = async () => {
     try {
-      if (isAvailable) {
-        // Bước A: Lấy dữ liệu mới nhất từ cảm biến máy vào Hook state
-        await refreshData();
-        // Bước B: Đẩy dữ liệu đó lên server
-        await syncToServer();
-      }
-    } catch (err) {
-      console.error("Lỗi đồng bộ cảm biến:", err);
-    } finally {
-      // Bước C: Luôn luôn tải lại dữ liệu từ Server để UI mới nhất
-      if (healthDataHook?.refresh) {
-        await healthDataHook.refresh();
-      }
-    }
-  }, [isAvailable, refreshData, syncToServer, healthDataHook]);
+      setIsSyncing(true);
+      await initialize();
 
-  // Tự động chạy khi mở App
+      // Yêu cầu quyền
+      await requestPermission([
+        { accessType: 'read', recordType: 'Steps' },
+        { accessType: 'read', recordType: 'HeartRate' },
+        { accessType: 'read', recordType: 'OxygenSaturation' },
+        { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
+        { accessType: 'read', recordType: 'Distance' },
+      ]);
+
+      // Lấy dữ liệu 30 ngày để đảm bảo biểu đồ tuần/tháng luôn đủ
+      const now = new Date();
+      const startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const endTime = now.toISOString();
+      const filter = { timeRangeFilter: { operator: 'between', startTime, endTime } };
+
+      const [steps, heart, oxygen, calories, distance] = await Promise.all([
+        readRecords('Steps', filter as any),
+        readRecords('HeartRate', filter as any),
+        readRecords('OxygenSaturation', filter as any),
+        readRecords('ActiveCaloriesBurned', filter as any),
+        readRecords('Distance', filter as any),
+      ]);
+
+      // Logic Gộp 15 phút "Siêu sạch"
+      const groupedMap: Record<string, any> = {};
+      const addToMap = (time: string, fields: object) => {
+        if (!time) return;
+        const date = new Date(time);
+        const roundedMinutes = Math.floor(date.getMinutes() / 15) * 15;
+        date.setMinutes(roundedMinutes, 0, 0);
+        const timeKey = date.toISOString();
+
+        if (!groupedMap[timeKey]) {
+          groupedMap[timeKey] = {
+            record_time: timeKey,
+            heart_rate: null, steps: null, blood_oxygen: null,
+            calories: null, distance: null, sleep_duration: null
+          };
+        }
+
+        Object.entries(fields).forEach(([key, value]) => {
+          if (['steps', 'calories', 'distance'].includes(key)) {
+            groupedMap[timeKey][key] = (groupedMap[timeKey][key] || 0) + value;
+          } else {
+            groupedMap[timeKey][key] = value;
+          }
+        });
+      };
+
+      steps.records.forEach((r: any) => addToMap(r.startTime, { steps: r.count }));
+      heart.records.forEach((r: any) => {
+        const lastBpm = r.samples[r.samples.length - 1]?.beatsPerMinute;
+        if (lastBpm) addToMap(r.startTime, { heart_rate: lastBpm });
+      });
+      oxygen.records.forEach((r: any) => addToMap(r.time, { blood_oxygen: r.percentage }));
+      calories.records.forEach((r: any) => addToMap(r.startTime, { calories: r.energy.inKilocalories }));
+      distance.records.forEach((r: any) => addToMap(r.startTime, { distance: r.distance.inMeters }));
+
+      const finalPayload = Object.values(groupedMap);
+
+      if (finalPayload.length > 0) {
+        // Gửi lên Server
+        await api.syncMetrics({ data: finalPayload });
+        console.log("✅ Đã đồng bộ lên server:", finalPayload.length, "mốc dữ liệu.");
+      }
+    } catch (error) {
+      console.error("❌ Lỗi đồng bộ:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // 3. Hàm OnRefresh khi vuốt màn hình
+  const onRefresh = useCallback(async () => {
+    // Bước A: Quét và đẩy dữ liệu mới từ máy lên Server
+    await handleSyncHealthConnect();
+    // Bước B: Tải lại dữ liệu từ Server để cập nhật UI
+    if (refreshFromServer) {
+      await refreshFromServer();
+    }
+  }, [refreshFromServer]);
+
   useEffect(() => {
     onRefresh();
-    
     const loadUser = async () => {
       const userData = await getUserData();
       if (userData?.name) setUserName(userData.name);
@@ -90,7 +145,7 @@ export default function HomeScreen() {
     loadUser();
   }, []);
 
-  // 4. Xử lý tính toán hiển thị (Processed Data)
+  // 4. Tính toán dữ liệu hiển thị từ serverData
   const processedData = useMemo(() => {
     const defaultData = {
       heartRate: { current: 0, min: 0, max: 0, avg: 0, history: [] as number[] },
@@ -130,13 +185,11 @@ export default function HomeScreen() {
     return Math.min(100, score);
   }, [processedData]);
 
-  // Helper vẽ chart mini
   const renderMiniChart = (chartData: number[], color: string) => {
     if (!chartData || chartData.length === 0) return <View style={styles.miniChart} />;
     const max = Math.max(...chartData, 1);
     const min = Math.min(...chartData, 0);
     const range = max - min || 1;
-
     return (
       <View style={styles.miniChart}>
         {chartData.map((value, index) => (
@@ -153,7 +206,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
@@ -186,7 +238,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl 
-            refreshing={healthDataHook?.loading || isSyncing} 
+            refreshing={isSyncing || isTableLoading} 
             onRefresh={onRefresh} 
             colors={[Colors.primary.main]} 
           />
@@ -214,7 +266,7 @@ export default function HomeScreen() {
             <View style={styles.metricIconContainer}><Ionicons name="heart" size={20} color="#FF4B4B" /></View>
             <View style={styles.metricTitleContainer}>
               <Text style={styles.metricTitle}>Nhịp tim</Text>
-              <Text style={styles.deviceText}>Đã đồng bộ từ điện thoại</Text>
+              <Text style={styles.deviceText}>Cập nhật từ thiết bị</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#CCC" />
           </View>
@@ -240,7 +292,7 @@ export default function HomeScreen() {
             <View style={[styles.metricIconContainer, { backgroundColor: '#E0F2FE' }]}><Ionicons name="water" size={20} color="#0EA5E9" /></View>
             <View style={styles.metricTitleContainer}>
               <Text style={styles.metricTitle}>Nồng độ Oxy (SpO2)</Text>
-              <Text style={styles.deviceText}>Cập nhật mới nhất</Text>
+              <Text style={styles.deviceText}>Theo thời gian thực</Text>
             </View>
           </View>
           <View style={styles.metricBody}>
@@ -275,139 +327,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-
-/*
-
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { initialize, requestPermission, readRecords, getSdkStatus, SdkAvailabilityStatus } from 'react-native-health-connect';
-import { Ionicons } from '@expo/vector-icons';
-import api from '../../services/api'; 
-
-export default function HealthDashboard() {
-  const [loading, setLoading] = useState(false);
-  const [dataGroups, setDataGroups] = useState<any>({});
-
-  const syncToDatabase = async (rawData: any) => {
-    try {
-      //console.log("🔄 [Sync] Bắt đầu chuẩn hóa dữ liệu cho Backend...");
-      
-      // Backend yêu cầu mảng nằm trong key "data"
-      // Và mỗi item phải có: type, value, time
-      const allRecords: any[] = [];
-
-      // Map Bước chân
-      rawData.Steps.forEach((r: any) => {
-        allRecords.push({ type: 'STEPS', value: r.count, time: r.startTime });
-      });
-
-      // Map Nhịp tim
-      rawData.HeartRate.forEach((r: any) => {
-        const bpm = r.samples[r.samples.length - 1]?.beatsPerMinute;
-        if (bpm) allRecords.push({ type: 'HEART_RATE', value: bpm, time: r.startTime });
-      });
-
-      // Map Calo
-      rawData.Calories.forEach((r: any) => {
-        allRecords.push({ type: 'CALORIES', value: r.energy.inKilocalories, time: r.startTime });
-      });
-
-      // Map Quãng đường
-      rawData.Distance.forEach((r: any) => {
-        allRecords.push({ type: 'DISTANCE', value: r.distance.inMeters, time: r.startTime });
-      });
-
-      // Map SpO2
-      rawData.Oxygen.forEach((r: any) => {
-        allRecords.push({ type: 'BLOOD_OXYGEN', value: r.percentage, time: r.time });
-      });
-
-      if (allRecords.length === 0) return;
-
-      //console.log(`📤 [Sync] Gửi ${allRecords.length} bản ghi lên server...`);
-
-      // CHÚ Ý: Backend Duy dùng const { data } = req.body
-      // Nên ta phải gửi object có key là "data"
-      const payload = { data: allRecords };
-
-      // Sử dụng axios/fetch thông qua api service
-      // Vì hàm syncHealthDataSmart trong api.ts đang bọc metrics, Duy nên dùng hàm syncMetrics 
-      // hoặc gọi trực tiếp fetch để khớp key "data"
-      const response: any = await api.syncMetrics(payload as any); 
-
-      if (response) {
-        //console.log(`✅ [Sync] Thành công! Đã lưu ${response.count} bản ghi.`);
-      }
-    } catch (error: any) {
-      //console.error("❌ [Sync] Lỗi:", error.message);
-    }
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      await initialize();
-      await requestPermission([
-        { accessType: 'read', recordType: 'Steps' },
-        { accessType: 'read', recordType: 'HeartRate' },
-        { accessType: 'read', recordType: 'OxygenSaturation' },
-        { accessType: 'read', recordType: 'Distance' },
-        { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-      ]);
-
-      const now = new Date();
-      const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-      const filter = { timeRangeFilter: { operator: 'between', startTime, endTime: now.toISOString() } };
-
-      const [steps, heartRate, oxygen, distance, calories] = await Promise.all([
-        readRecords('Steps', filter as any),
-        readRecords('HeartRate', filter as any),
-        readRecords('OxygenSaturation', filter as any),
-        readRecords('Distance', filter as any),
-        readRecords('ActiveCaloriesBurned', filter as any), 
-      ]);
-
-      const rawData = {
-        Steps: steps.records,
-        HeartRate: heartRate.records,
-        Oxygen: oxygen.records,
-        Distance: distance.records,
-        Calories: calories.records,
-      };
-
-      setDataGroups(rawData);
-      await syncToDatabase(rawData);
-    } catch (e) {
-      //console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.appBar}><Text style={styles.appBarTitle}>Đồng bộ Duy</Text></View>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={styles.txt}>Dữ liệu hôm nay: {Object.values(dataGroups).flat().length} mục</Text>
-      </ScrollView>
-      <TouchableOpacity style={styles.btn} onPress={fetchData} disabled={loading}>
-        <Text style={styles.btnTxt}>{loading ? 'ĐANG CHẠY...' : 'ĐỒNG BỘ NGAY'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  appBar: { height: 90, backgroundColor: '#1E3A8A', justifyContent: 'center', alignItems: 'center', paddingTop: 30 },
-  appBarTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  txt: { textAlign: 'center', color: '#666' },
-  btn: { position: 'absolute', bottom: 30, left: 20, right: 20, height: 50, backgroundColor: '#10B981', borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-  btnTxt: { color: '#fff', fontWeight: 'bold' }
-});
-
-
-*/
