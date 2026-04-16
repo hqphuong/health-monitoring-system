@@ -4,16 +4,27 @@ import { Server } from 'socket.io';
 import prisma from './lib/prisma.js';
 import { pushToQueue } from './queue.js';
 import { processMetricJob } from './worker.js';
+import apiRoutes from './routes/index.js';
+import { setupSwagger } from './config/swagger.js';
 
 const app = express();
 const server = http.createServer(app);
 
+// 🔥 setup socket
 const io = new Server(server, {
     cors: { origin: "*" }
 });
 
+// middleware
 app.use(express.json());
 
+// REST API
+app.use('/api/v1', apiRoutes);
+
+// Swagger
+setupSwagger(app);
+
+// SOCKET LOGIC
 io.on('connection', (socket) => {
 
     socket.on('start_session', async ({ user_id }) => {
@@ -39,7 +50,6 @@ io.on('connection', (socket) => {
         const { metrics } = payload;
 
         for (const metric of metrics) {
-
             pushToQueue(() =>
                 processMetricJob(metric, socket, io)
             );
@@ -48,6 +58,7 @@ io.on('connection', (socket) => {
 
 });
 
-server.listen(3000, () => {
-    console.log("Server running");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
