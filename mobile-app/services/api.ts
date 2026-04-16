@@ -274,7 +274,7 @@ async function fetchAPI<T>(
     }
 
     const data = await response.json();
-    console.log(`✅ [API] Response:`, data);
+    //console.log(`✅ [API] Response:`, data);
     return data;
   } catch (error) {
     clearTimeout(timeoutId);

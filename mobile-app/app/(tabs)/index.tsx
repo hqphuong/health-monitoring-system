@@ -7,6 +7,7 @@ import {
   StatusBar,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -43,18 +44,31 @@ export default function HomeScreen() {
   const { data: serverDataRaw, loading: isTableLoading, refresh: refreshFromServer } = useHealthData();
   const { randomTip } = useHealthTips();
 
-  // 1. Chuyển đổi dữ liệu từ Server sang mảng chuẩn
+  // 1. DATA PICKER: Bóc tách dữ liệu từ Server chuẩn xác nhất
+  // 1. DATA PICKER: Bóc tách dữ liệu từ Server chuẩn xác nhất
   const serverData = useMemo(() => {
-    return Array.isArray(serverDataRaw) ? (serverDataRaw as unknown as HealthRecord[]) : [];
+    // Backend của Duy trả về object có key "raw_data"
+    // Axios/Fetch có thể bọc thêm một lớp "data" bên ngoài
+    const raw = (serverDataRaw as any)?.data?.raw_data || 
+                (serverDataRaw as any)?.raw_data;
+    
+    if (Array.isArray(raw)) {
+      return raw as HealthRecord[];
+    }
+    
+    // Log để kiểm tra nếu vẫn không ra mảng
+    if (serverDataRaw) {
+        console.log("⚠️ Vẫn chưa tìm thấy mảng raw_data. Cấu trúc hiện tại:", Object.keys(serverDataRaw));
+    }
+    
+    return [];
   }, [serverDataRaw]);
 
-  // 2. LOGIC CHÍNH: QUÉT, GỘP VÀ ĐỒNG BỘ
+  // 2. LOGIC ĐỒNG BỘ: Quét 30 ngày và gộp 15 phút
   const handleSyncHealthConnect = async () => {
     try {
       setIsSyncing(true);
       await initialize();
-
-      // Yêu cầu quyền
       await requestPermission([
         { accessType: 'read', recordType: 'Steps' },
         { accessType: 'read', recordType: 'HeartRate' },
@@ -63,7 +77,6 @@ export default function HomeScreen() {
         { accessType: 'read', recordType: 'Distance' },
       ]);
 
-      // Lấy dữ liệu 30 ngày để đảm bảo biểu đồ tuần/tháng luôn đủ
       const now = new Date();
       const startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const endTime = now.toISOString();
@@ -77,11 +90,11 @@ export default function HomeScreen() {
         readRecords('Distance', filter as any),
       ]);
 
-      // Logic Gộp 15 phút "Siêu sạch"
       const groupedMap: Record<string, any> = {};
       const addToMap = (time: string, fields: object) => {
         if (!time) return;
         const date = new Date(time);
+        if (isNaN(date.getTime())) return;
         const roundedMinutes = Math.floor(date.getMinutes() / 15) * 15;
         date.setMinutes(roundedMinutes, 0, 0);
         const timeKey = date.toISOString();
@@ -96,7 +109,7 @@ export default function HomeScreen() {
 
         Object.entries(fields).forEach(([key, value]) => {
           if (['steps', 'calories', 'distance'].includes(key)) {
-            groupedMap[timeKey][key] = (groupedMap[timeKey][key] || 0) + value;
+            groupedMap[timeKey][key] = (groupedMap[timeKey][key] || 0) + (value || 0);
           } else {
             groupedMap[timeKey][key] = value;
           }
@@ -113,80 +126,103 @@ export default function HomeScreen() {
       distance.records.forEach((r: any) => addToMap(r.startTime, { distance: r.distance.inMeters }));
 
       const finalPayload = Object.values(groupedMap);
-
       if (finalPayload.length > 0) {
-        // Gửi lên Server
         await api.syncMetrics({ data: finalPayload });
-        console.log("✅ Đã đồng bộ lên server:", finalPayload.length, "mốc dữ liệu.");
+        console.log(`✅ [Sync] Đã đẩy ${finalPayload.length} bản ghi lên Database.`);
       }
-    } catch (error) {
-      console.error("❌ Lỗi đồng bộ:", error);
+    } catch (error: any) {
+      console.error("❌ Sync Error:", error.message);
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // 3. Hàm OnRefresh khi vuốt màn hình
   const onRefresh = useCallback(async () => {
-    // Bước A: Quét và đẩy dữ liệu mới từ máy lên Server
     await handleSyncHealthConnect();
-    // Bước B: Tải lại dữ liệu từ Server để cập nhật UI
-    if (refreshFromServer) {
-      await refreshFromServer();
-    }
+    if (refreshFromServer) await refreshFromServer();
   }, [refreshFromServer]);
 
   useEffect(() => {
-    onRefresh();
     const loadUser = async () => {
       const userData = await getUserData();
-      if (userData?.name) setUserName(userData.name);
+      const nameToShow = (userData as any)?.full_name || (userData as any)?.name || 'Người dùng';
+      setUserName(nameToShow);
     };
     loadUser();
+    onRefresh(); // Tự động sync khi mở app
   }, []);
 
-  // 4. Tính toán dữ liệu hiển thị từ serverData
+  // 3. LOGIC TÍNH TOÁN VÀ CONSOLE TEST
   const processedData = useMemo(() => {
-    const defaultData = {
+    const defaultStats = {
       heartRate: { current: 0, min: 0, max: 0, avg: 0, history: [] as number[] },
-      oxygen: { current: 0, history: [] as number[] },
+      oxygen: { current: 0, avg: 0, history: [] as number[] },
       steps: { current: 0, goal: 10000 },
       sleep: { duration: 0, quality: 85 }
     };
 
-    if (serverData.length === 0) return defaultData;
+    if (serverData.length === 0) {
+      console.log("⚠️ [Data] Đang chờ dữ liệu từ server...");
+      return defaultStats;
+    }
 
-    const hrList = serverData.filter(r => r.heart_rate).map(r => r.heart_rate as number);
-    const oxList = serverData.filter(r => r.blood_oxygen).map(r => r.blood_oxygen as number);
-    const stepsTotal = serverData.reduce((sum, r) => sum + (r.steps || 0), 0);
-    const sleepTotal = serverData.reduce((sum, r) => sum + (r.sleep_duration || 0), 0);
+    const now = new Date();
+    const filteredRecords = serverData.filter(r => {
+      const rDate = new Date(r.record_time);
+      if (timeRange === 'day') return rDate.toDateString() === now.toDateString();
+      if (timeRange === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        return rDate >= weekAgo;
+      }
+      return true; // Month
+    });
 
-    return {
+    const hrValues = filteredRecords.map(r => r.heart_rate).filter((v): v is number => v !== null);
+    const oxValues = filteredRecords.map(r => r.blood_oxygen).filter((v): v is number => v !== null);
+    const totalSteps = filteredRecords.reduce((sum, r) => sum + (r.steps || 0), 0);
+    const totalSleepMin = filteredRecords.reduce((sum, r) => sum + (r.sleep_duration || 0), 0);
+
+    const result = {
       heartRate: {
-        current: hrList.length ? hrList[hrList.length - 1] : 0,
-        min: hrList.length ? Math.min(...hrList) : 0,
-        max: hrList.length ? Math.max(...hrList) : 0,
-        avg: hrList.length ? Math.round(hrList.reduce((a, b) => a + b, 0) / hrList.length) : 0,
-        history: hrList.slice(-7),
+        current: hrValues.length ? hrValues[hrValues.length - 1] : 0,
+        min: hrValues.length ? Math.min(...hrValues) : 0,
+        max: hrValues.length ? Math.max(...hrValues) : 0,
+        avg: hrValues.length ? Math.round(hrValues.reduce((a, b) => a + b, 0) / hrValues.length) : 0,
+        history: hrValues.slice(-8),
       },
       oxygen: {
-        current: oxList.length ? oxList[oxList.length - 1] : 0,
-        history: oxList.slice(-7)
+        current: oxValues.length ? oxValues[oxValues.length - 1] : 0,
+        avg: oxValues.length ? Math.round(oxValues.reduce((a, b) => a + b, 0) / oxValues.length) : 0,
+        history: oxValues.slice(-8)
       },
-      steps: { current: stepsTotal, goal: 10000 },
-      sleep: { duration: sleepTotal, quality: 85 }
+      steps: { current: Math.round(totalSteps), goal: 10000 },
+      sleep: { duration: Math.round(totalSleepMin / 60), quality: 85 }
     };
-  }, [serverData]);
+
+    // --- CONSOLE LOG TEST DỮ LIỆU ---
+    console.log("====================================");
+    console.log(`📊 TEST DATA TAB: [${timeRange.toUpperCase()}]`);
+    console.log(`- Nhịp tim: Min(${result.heartRate.min}) Avg(${result.heartRate.avg}) Max(${result.heartRate.max})`);
+    console.log(`- SpO2: Mới nhất(${result.oxygen.current}%) Avg(${result.oxygen.avg}%)`);
+    console.log(`- Tổng bước chân: ${result.steps.current}`);
+    console.log(`- Giờ ngủ: ${result.sleep.duration}h`);
+    console.log(`- Số mốc dữ liệu tìm thấy: ${filteredRecords.length}`);
+    console.log("====================================");
+
+    return result;
+  }, [serverData, timeRange]);
 
   const healthScore = useMemo(() => {
-    let score = 60;
-    if (processedData.oxygen.current >= 95) score += 20;
-    if (processedData.heartRate.avg >= 60 && processedData.heartRate.avg <= 100) score += 20;
+    let score = 65;
+    const avgOxy = processedData.oxygen.avg || processedData.oxygen.current;
+    if (avgOxy >= 95) score += 20;
+    if (processedData.heartRate.avg >= 60 && processedData.heartRate.avg <= 100) score += 15;
     return Math.min(100, score);
   }, [processedData]);
 
   const renderMiniChart = (chartData: number[], color: string) => {
-    if (!chartData || chartData.length === 0) return <View style={styles.miniChart} />;
+    if (!chartData.length) return <View style={styles.miniChart} />;
     const max = Math.max(...chartData, 1);
     const min = Math.min(...chartData, 0);
     const range = max - min || 1;
@@ -194,7 +230,7 @@ export default function HomeScreen() {
       <View style={styles.miniChart}>
         {chartData.map((value, index) => (
           <View key={index} style={[styles.miniChartBar, { 
-            height: ((value - min) / range) * 40 + 8, 
+            height: ((value - min) / range) * 35 + 10, 
             backgroundColor: index === chartData.length - 1 ? color : color + '40' 
           }]} />
         ))}
@@ -205,15 +241,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" />
-
+      
+      {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.greeting}>Xin chào,</Text>
-            <Text style={styles.userName}>{userName || 'Người dùng'}</Text>
+            <Text style={styles.userName}>{userName}</Text>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color="#FFF" />
+            {isSyncing ? <ActivityIndicator color="#FFF" /> : <Ionicons name="notifications-outline" size={24} color="#FFF" />}
           </TouchableOpacity>
         </View>
 
@@ -235,54 +272,43 @@ export default function HomeScreen() {
       <ScrollView 
         style={styles.content} 
         contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={isSyncing || isTableLoading} 
-            onRefresh={onRefresh} 
-            colors={[Colors.primary.main]} 
-          />
+          <RefreshControl refreshing={isSyncing || isTableLoading} onRefresh={onRefresh} colors={[Colors.primary.main]} />
         }
       >
-        {/* Health Score Card */}
+        {/* Health Score */}
         <View style={styles.healthScoreCard}>
           <View style={styles.healthScoreLeft}>
-            <Text style={styles.healthScoreLabel}>Điểm sức khỏe</Text>
+            <Text style={styles.healthScoreLabel}>Điểm sức khỏe {timeRange === 'day' ? 'Hôm nay' : 'Giai đoạn'}</Text>
             <View style={styles.healthScoreRow}>
               <Text style={styles.healthScoreValue}>{healthScore}</Text>
               <Text style={styles.healthScoreUnit}>/100</Text>
             </View>
-            <Text style={styles.healthScoreStatus}>{healthScore >= 80 ? 'Rất Tốt' : 'Ổn định'}</Text>
+            <Text style={styles.healthScoreStatus}>{healthScore >= 85 ? 'Rất Tốt' : 'Bình thường'}</Text>
           </View>
-          <Ionicons name="heart-circle" size={80} color={Colors.primary.main} />
+          <Ionicons name="pulse" size={80} color={Colors.primary.main} />
         </View>
 
         {/* Heart Rate Card */}
-        <TouchableOpacity 
-          style={styles.metricCard} 
-          onPress={() => router.push('/(health)/heart-rate-detail')}
-        >
+        <TouchableOpacity style={styles.metricCard} onPress={() => router.push('/(health)/heart-rate-detail')}>
           <View style={styles.metricHeader}>
             <View style={styles.metricIconContainer}><Ionicons name="heart" size={20} color="#FF4B4B" /></View>
             <View style={styles.metricTitleContainer}>
-              <Text style={styles.metricTitle}>Nhịp tim</Text>
-              <Text style={styles.deviceText}>Cập nhật từ thiết bị</Text>
+              <Text style={styles.metricTitle}>Nhịp tim (BPM)</Text>
+              <Text style={styles.deviceText}>T.bình: {processedData.heartRate.avg}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#CCC" />
           </View>
           <View style={styles.metricBody}>
             <View style={styles.metricMainValue}>
-              <Text style={styles.mainValueText}>{processedData.heartRate.current}</Text>
-              <Text style={styles.mainValueUnit}> BPM</Text>
+              <Text style={styles.mainValueText}>{processedData.heartRate.avg || '--'}</Text>
             </View>
             <View style={styles.metricChart}>{renderMiniChart(processedData.heartRate.history, "#FF4B4B")}</View>
           </View>
           <View style={styles.metricFooter}>
-            <Text style={styles.statLabel}>Min: <Text style={styles.statValue}>{processedData.heartRate.min}</Text></Text>
+            <Text style={styles.statLabel}>Thấp nhất: <Text style={styles.statValue}>{processedData.heartRate.min}</Text></Text>
             <View style={styles.metricStatDivider} />
-            <Text style={styles.statLabel}>Avg: <Text style={styles.statValue}>{processedData.heartRate.avg}</Text></Text>
-            <View style={styles.metricStatDivider} />
-            <Text style={styles.statLabel}>Max: <Text style={styles.statValue}>{processedData.heartRate.max}</Text></Text>
+            <Text style={styles.statLabel}>Cao nhất: <Text style={styles.statValue}>{processedData.heartRate.max}</Text></Text>
           </View>
         </TouchableOpacity>
 
@@ -291,37 +317,39 @@ export default function HomeScreen() {
           <View style={styles.metricHeader}>
             <View style={[styles.metricIconContainer, { backgroundColor: '#E0F2FE' }]}><Ionicons name="water" size={20} color="#0EA5E9" /></View>
             <View style={styles.metricTitleContainer}>
-              <Text style={styles.metricTitle}>Nồng độ Oxy (SpO2)</Text>
-              <Text style={styles.deviceText}>Theo thời gian thực</Text>
+              <Text style={styles.metricTitle}>Oxy trong máu (SpO2)</Text>
+              <Text style={styles.deviceText}>{timeRange === 'day' ? 'Hiện tại' : 'Trung bình'}</Text>
             </View>
           </View>
           <View style={styles.metricBody}>
             <View style={styles.metricMainValue}>
-              <Text style={styles.mainValueText}>{processedData.oxygen.current}</Text>
-              <Text style={styles.mainValueUnit}> %</Text>
+              <Text style={styles.mainValueText}>
+                {timeRange === 'day' ? (processedData.oxygen.current || '--') : (processedData.oxygen.avg || '--')}
+                <Text style={styles.mainValueUnit}> %</Text>
+              </Text>
             </View>
             <View style={styles.metricChart}>{renderMiniChart(processedData.oxygen.history, "#0EA5E9")}</View>
           </View>
         </View>
 
-        {/* Row Steps & Sleep */}
+        {/* Steps & Sleep Row */}
         <View style={styles.smallCardsRow}>
           <View style={styles.smallCard}>
-            <Ionicons name="footsteps" size={24} color="#10B981" />
+            <Ionicons name="footsteps" size={26} color="#10B981" />
             <Text style={styles.smallCardValue}>{processedData.steps.current.toLocaleString()}</Text>
-            <Text style={styles.smallCardLabel}>bước chân</Text>
+            <Text style={styles.smallCardLabel}>tổng bước</Text>
           </View>
           <View style={styles.smallCard}>
-            <Ionicons name="moon" size={24} color="#8B5CF6" />
+            <Ionicons name="moon" size={26} color="#8B5CF6" />
             <Text style={styles.smallCardValue}>{processedData.sleep.duration}</Text>
             <Text style={styles.smallCardLabel}>giờ ngủ</Text>
           </View>
         </View>
 
-        {/* Tip Section */}
+        {/* Advice Section */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 {randomTip?.title || 'Gợi ý hôm nay'}</Text>
-          <Text style={styles.tipsText}>{randomTip?.content || 'Hãy duy trì thói quen tập thể dục mỗi ngày nhé.'}</Text>
+          <Text style={styles.tipsTitle}>💡 {randomTip?.title || 'Lời khuyên'}</Text>
+          <Text style={styles.tipsText}>{randomTip?.content || 'Đang cập nhật lời khuyên sức khỏe...'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
