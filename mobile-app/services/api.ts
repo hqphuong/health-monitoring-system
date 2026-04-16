@@ -328,6 +328,19 @@ export const api = {
       body: JSON.stringify({ id_token: idToken }),
     }),
 
+  // Tìm hàm verifyRegisterOTP và sửa lại như sau:
+  verifyRegisterOTP: (payload: { email: string; otp: string }): Promise<LoginResponse> =>
+    fetchAPI<any>(ENDPOINTS.AUTH_VERIFY_OTP, { 
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }).then(res => {
+      // Chuyển đổi cấu trúc từ { data: { access_token, user } } 
+      // sang { token, user } để khớp với Interface LoginResponse cũ của bạn
+      return {
+        token: res.data.access_token,
+        user: res.data.user
+      };
+    }),
   // ==================
   // PROFILE
   // ==================

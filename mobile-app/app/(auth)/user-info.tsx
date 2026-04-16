@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Colors';
 import { api } from '../../services/api';
+import { setIsAuthenticated } from '../_layout'; // Import hàm cập nhật Auth
 
 type Gender = 'male' | 'female' | 'other' | null;
 
@@ -66,40 +67,48 @@ export default function UserInfoScreen() {
 
     setLoading(true);
     try {
-      // Parse birthDate từ DD/MM/YYYY sang ISO format
-      let dateOfBirth = null;
+      // Parse birthDate từ DD/MM/YYYY sang ISO format (YYYY-MM-DD)
+      let formattedBirth = null;
       if (birthDate) {
         const parts = birthDate.split('/');
         if (parts.length === 3) {
-          dateOfBirth = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          formattedBirth = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
       }
 
-      // Lưu thông tin người dùng vào backend
+      // Cập nhật Profile lên Backend
       await api.updateProfile({
         full_name: fullName.trim(),
-        date_of_birth: dateOfBirth || undefined,
+        birth: formattedBirth, // Sử dụng 'birth' theo Schema Prisma
         gender: gender || undefined,
         height: height ? parseFloat(height) : undefined,
         weight: weight ? parseFloat(weight) : undefined,
       });
 
       console.log('✅ User info saved successfully');
+      
+      // QUAN TRỌNG: Cập nhật trạng thái Auth toàn cục trước khi chuyển màn hình
+      setIsAuthenticated(true);
+      
+      // Chuyển hướng thay thế hoàn toàn để không quay lại được màn Auth
       router.replace('/(tabs)');
+      
     } catch (error) {
       console.error('❌ Error saving user info:', error);
       const message = error instanceof Error ? error.message : 'Có lỗi xảy ra';
-      Alert.alert('Lỗi', message);
+      
+      if (message.includes('PROFILE_INCOMPLETE')) {
+         Alert.alert('Thông báo', 'Hệ thống cần đầy đủ Chiều cao, Cân nặng và Ngày sinh để hoạt động.');
+      } else {
+         Alert.alert('Lỗi', message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const formatBirthDate = (text: string) => {
-    // Remove non-numeric characters
     const cleaned = text.replace(/\D/g, '');
-
-    // Format as DD/MM/YYYY
     let formatted = cleaned;
     if (cleaned.length >= 2) {
       formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
@@ -107,7 +116,6 @@ export default function UserInfoScreen() {
     if (cleaned.length >= 4) {
       formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
     }
-
     setBirthDate(formatted);
   };
 
@@ -129,7 +137,6 @@ export default function UserInfoScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Progress Indicator */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '100%' }]} />
@@ -137,7 +144,6 @@ export default function UserInfoScreen() {
             <Text style={styles.progressText}>Bước cuối cùng</Text>
           </View>
 
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.titleText}>Thông tin cá nhân</Text>
             <Text style={styles.subtitleText}>
@@ -145,7 +151,6 @@ export default function UserInfoScreen() {
             </Text>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
             <Input
               label="Họ và tên"
@@ -169,7 +174,6 @@ export default function UserInfoScreen() {
               required
             />
 
-            {/* Gender Selection */}
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>
                 Giới tính <Text style={styles.required}>*</Text>
@@ -208,7 +212,6 @@ export default function UserInfoScreen() {
               )}
             </View>
 
-            {/* Height & Weight */}
             <View style={styles.row}>
               <View style={styles.halfField}>
                 <Input
@@ -234,7 +237,6 @@ export default function UserInfoScreen() {
               </View>
             </View>
 
-            {/* BMI Preview */}
             {height && weight && !isNaN(Number(height)) && !isNaN(Number(weight)) && (
               <View style={styles.bmiContainer}>
                 <Text style={styles.bmiLabel}>Chỉ số BMI của bạn:</Text>
@@ -255,7 +257,10 @@ export default function UserInfoScreen() {
 
             <TouchableOpacity
               style={styles.skipButton}
-              onPress={() => router.replace('/(tabs)')}
+              onPress={() => {
+                setIsAuthenticated(true);
+                router.replace('/(tabs)');
+              }}
             >
               <Text style={styles.skipText}>Bỏ qua, thiết lập sau</Text>
             </TouchableOpacity>

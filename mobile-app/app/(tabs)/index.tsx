@@ -6,19 +6,23 @@ import {
   TouchableOpacity,
   StatusBar,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+// Import Constants & Hooks
 import { Colors } from '../../constants/Colors';
 import { useHealthData } from '../../hooks/useHealthData';
+import { useHealthConnect } from '../../hooks/useHealthConnect'; // Hook bạn đã cung cấp
 import { getUserData } from '../../services/auth';
 import { useHealthTips } from '../../hooks/useHealthTips';
 
-// Import styles từ file riêng cùng thư mục
+// Import styles
 import { styles } from './index.styles';
 
-// 1. Interface định nghĩa cấu trúc dữ liệu bản ghi từ cảm biến
+// Interface cho dữ liệu hiển thị (từ Server)
 interface HealthRecord {
   user_id: string;
   record_time: string | Date;
@@ -36,23 +40,58 @@ export default function HomeScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [userName, setUserName] = useState<string>('');
   
-  // Gọi hook dữ liệu sức khỏe
+  // 1. Hook lấy dữ liệu từ Server để hiển thị lên UI
   const healthDataHook = useHealthData();
   
-  // Ép kiểu an toàn: Chuyển đổi dữ liệu trả về thành mảng HealthRecord
-  const data = useMemo(() => {
-    const raw = healthDataHook?.data;
-    return Array.isArray(raw) ? (raw as unknown as HealthRecord[]) : [];
-  }, [healthDataHook?.data]);
-  
-  const loading = healthDataHook?.loading || false;
-  const refresh = healthDataHook?.refresh;
+  // 2. Hook kết nối với Google Health Connect (để đẩy dữ bộ)
+  const { 
+    refreshData, 
+    syncToServer, 
+    loading: isSyncing, 
+    isAvailable,
+    error: syncError 
+  } = useHealthConnect();
 
   const { randomTip } = useHealthTips();
 
-  // 2. Xử lý logic tính toán từ mảng dữ liệu
+  // Ép kiểu dữ liệu từ Server
+  const serverData = useMemo(() => {
+    const raw = healthDataHook?.data;
+    return Array.isArray(raw) ? (raw as unknown as HealthRecord[]) : [];
+  }, [healthDataHook?.data]);
+
+  // 3. Logic xử lý làm mới (Refresh): Quan trọng nhất
+  const onRefresh = useCallback(async () => {
+    try {
+      if (isAvailable) {
+        // Bước A: Lấy dữ liệu mới nhất từ cảm biến máy vào Hook state
+        await refreshData();
+        // Bước B: Đẩy dữ liệu đó lên server
+        await syncToServer();
+      }
+    } catch (err) {
+      console.error("Lỗi đồng bộ cảm biến:", err);
+    } finally {
+      // Bước C: Luôn luôn tải lại dữ liệu từ Server để UI mới nhất
+      if (healthDataHook?.refresh) {
+        await healthDataHook.refresh();
+      }
+    }
+  }, [isAvailable, refreshData, syncToServer, healthDataHook]);
+
+  // Tự động chạy khi mở App
+  useEffect(() => {
+    onRefresh();
+    
+    const loadUser = async () => {
+      const userData = await getUserData();
+      if (userData?.name) setUserName(userData.name);
+    };
+    loadUser();
+  }, []);
+
+  // 4. Xử lý tính toán hiển thị (Processed Data)
   const processedData = useMemo(() => {
-    // Giá trị mặc định nếu mảng rỗng
     const defaultData = {
       heartRate: { current: 0, min: 0, max: 0, avg: 0, history: [] as number[] },
       oxygen: { current: 0, history: [] as number[] },
@@ -60,64 +99,38 @@ export default function HomeScreen() {
       sleep: { duration: 0, quality: 85 }
     };
 
-    if (!data || data.length === 0) return defaultData;
+    if (serverData.length === 0) return defaultData;
 
-    // Lọc mảng cho từng loại chỉ số (loại bỏ null)
-    const hrList = data.filter(r => r.heart_rate !== null).map(r => r.heart_rate as number);
-    const stepsList = data.filter(r => r.steps !== null).map(r => r.steps as number);
-    const oxList = data.filter(r => r.blood_oxygen !== null).map(r => r.blood_oxygen as number);
-    const sleepList = data.filter(r => r.sleep_duration !== null).map(r => r.sleep_duration as number);
+    const hrList = serverData.filter(r => r.heart_rate).map(r => r.heart_rate as number);
+    const oxList = serverData.filter(r => r.blood_oxygen).map(r => r.blood_oxygen as number);
+    const stepsTotal = serverData.reduce((sum, r) => sum + (r.steps || 0), 0);
+    const sleepTotal = serverData.reduce((sum, r) => sum + (r.sleep_duration || 0), 0);
 
     return {
       heartRate: {
-        // Giá trị cuối cùng là giá trị mới nhất
         current: hrList.length ? hrList[hrList.length - 1] : 0,
         min: hrList.length ? Math.min(...hrList) : 0,
         max: hrList.length ? Math.max(...hrList) : 0,
-        // Tính trung bình cộng
         avg: hrList.length ? Math.round(hrList.reduce((a, b) => a + b, 0) / hrList.length) : 0,
-        // Lấy 7 điểm gần nhất để vẽ biểu đồ mini
         history: hrList.slice(-7),
       },
       oxygen: {
         current: oxList.length ? oxList[oxList.length - 1] : 0,
         history: oxList.slice(-7)
       },
-      steps: {
-        // Cộng dồn tổng số bước chân trong mảng
-        current: stepsList.reduce((a, b) => a + b, 0),
-        goal: 10000,
-      },
-      sleep: {
-        // Cộng dồn tổng thời gian ngủ (giờ)
-        duration: sleepList.reduce((a, b) => a + b, 0),
-        quality: 85,
-      }
+      steps: { current: stepsTotal, goal: 10000 },
+      sleep: { duration: sleepTotal, quality: 85 }
     };
-  }, [data]);
+  }, [serverData]);
 
-  // 3. Tính điểm sức khỏe dựa trên công thức SpO2 + Nhịp tim
   const healthScore = useMemo(() => {
-    let score = 60; // Điểm sàn
+    let score = 60;
     if (processedData.oxygen.current >= 95) score += 20;
     if (processedData.heartRate.avg >= 60 && processedData.heartRate.avg <= 100) score += 20;
     return Math.min(100, score);
   }, [processedData]);
 
-  // Hành động vuốt để đồng bộ/làm mới
-  const onRefresh = useCallback(() => {
-    if (refresh) refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    const loadUserName = async () => {
-      const userData = await getUserData();
-      if (userData?.name) setUserName(userData.name);
-      else if (userData?.email) setUserName(userData.email.split('@')[0]);
-    };
-    loadUserName();
-  }, []);
-
+  // Helper vẽ chart mini
   const renderMiniChart = (chartData: number[], color: string) => {
     if (!chartData || chartData.length === 0) return <View style={styles.miniChart} />;
     const max = Math.max(...chartData, 1);
@@ -140,6 +153,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" />
 
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
@@ -171,10 +185,14 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={[Colors.primary.main]} />
+          <RefreshControl 
+            refreshing={healthDataHook?.loading || isSyncing} 
+            onRefresh={onRefresh} 
+            colors={[Colors.primary.main]} 
+          />
         }
       >
-        {/* Card Điểm sức khỏe */}
+        {/* Health Score Card */}
         <View style={styles.healthScoreCard}>
           <View style={styles.healthScoreLeft}>
             <Text style={styles.healthScoreLabel}>Điểm sức khỏe</Text>
@@ -187,13 +205,16 @@ export default function HomeScreen() {
           <Ionicons name="heart-circle" size={80} color={Colors.primary.main} />
         </View>
 
-        {/* Card Nhịp tim */}
-        <TouchableOpacity style={styles.metricCard} onPress={() => router.push('/(health)/heart-rate-detail')}>
+        {/* Heart Rate Card */}
+        <TouchableOpacity 
+          style={styles.metricCard} 
+          onPress={() => router.push('/(health)/heart-rate-detail')}
+        >
           <View style={styles.metricHeader}>
             <View style={styles.metricIconContainer}><Ionicons name="heart" size={20} color="#FF4B4B" /></View>
             <View style={styles.metricTitleContainer}>
               <Text style={styles.metricTitle}>Nhịp tim</Text>
-              <Text style={styles.deviceText}>Dữ liệu từ cảm biến</Text>
+              <Text style={styles.deviceText}>Đã đồng bộ từ điện thoại</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#CCC" />
           </View>
@@ -213,13 +234,13 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Card Nồng độ Oxy (SpO2) */}
+        {/* SpO2 Card */}
         <View style={styles.metricCard}>
           <View style={styles.metricHeader}>
             <View style={[styles.metricIconContainer, { backgroundColor: '#E0F2FE' }]}><Ionicons name="water" size={20} color="#0EA5E9" /></View>
             <View style={styles.metricTitleContainer}>
               <Text style={styles.metricTitle}>Nồng độ Oxy (SpO2)</Text>
-              <Text style={styles.deviceText}>Cập nhật thời gian thực</Text>
+              <Text style={styles.deviceText}>Cập nhật mới nhất</Text>
             </View>
           </View>
           <View style={styles.metricBody}>
@@ -231,7 +252,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Hàng ngang: Bước chân & Giấc ngủ */}
+        {/* Row Steps & Sleep */}
         <View style={styles.smallCardsRow}>
           <View style={styles.smallCard}>
             <Ionicons name="footsteps" size={24} color="#10B981" />
@@ -245,16 +266,15 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Lời khuyên sức khỏe */}
+        {/* Tip Section */}
         <View style={styles.tipsCard}>
           <Text style={styles.tipsTitle}>💡 {randomTip?.title || 'Gợi ý hôm nay'}</Text>
-          <Text style={styles.tipsText}>{randomTip?.content || 'Uống đủ nước để duy trì năng lượng cho ngày mới.'}</Text>
+          <Text style={styles.tipsText}>{randomTip?.content || 'Hãy duy trì thói quen tập thể dục mỗi ngày nhé.'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
 
 
 /*

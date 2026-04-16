@@ -14,6 +14,7 @@ export const ENDPOINTS = {
   // Auth - Xác thực người dùng
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/registerUser',
+  AUTH_VERIFY_OTP: '/auth/verify-otp',
   AUTH_GOOGLE: '/auth/google',
   AUTH_FORGOT_PASSWORD: '/auth/forgot-password',
   AUTH_RESET_PASSWORD: '/auth/reset-password',

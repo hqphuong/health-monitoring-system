@@ -305,3 +305,65 @@ export const resetPassword = async (req, res) => {
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
+
+// --- VERIFY OTP (DÙNG ĐỂ XÁC THỰC SAU KHI ĐĂNG KÝ) ---
+export const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({ status: "error", message: "Vui lòng cung cấp email và mã OTP." });
+        }
+
+        // 1. Tìm user theo email
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ status: "error", message: "Người dùng không tồn tại." });
+        }
+
+        // 2. Kiểm tra mã OTP (Sử dụng cột reset_otp như hàm registerUser đang dùng)
+        if (user.reset_otp !== otp) {
+            return res.status(400).json({ status: "error", message: "Mã OTP không chính xác." });
+        }
+
+        // 3. Kiểm tra hết hạn
+        if (user.otp_expires_at && user.otp_expires_at < new Date()) {
+            return res.status(400).json({ status: "error", message: "Mã OTP đã hết hạn." });
+        }
+
+        // 4. XÁC THỰC THÀNH CÔNG -> TẠO TOKEN
+        // Đây là bước quan trọng để Mobile nhận được Token và không bị lỗi 401
+        const token = jwt.sign(
+            { user_id: user.user_id }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '365d' }
+        );
+
+        // 5. Xóa OTP sau khi xác thực thành công
+        await prisma.user.update({
+            where: { email },
+            data: {
+                reset_otp: null,
+                otp_expires_at: null
+            }
+        });
+
+        return res.status(200).json({
+            status: "success",
+            message: "Xác thực tài khoản thành công.",
+            data: {
+                user: { 
+                    user_id: user.user_id, 
+                    email: user.email, 
+                    full_name: user.full_name 
+                },
+                access_token: token // Trả Token về cho Mobile
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Lỗi VerifyOTP:", error);
+        return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
+    }
+};
