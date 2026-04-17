@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
-export function useHealthData() {
+export function useHealthData(range: string = 'day') {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -9,9 +9,15 @@ export function useHealthData() {
   const fetchHealthData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.getHealthData();
-      // Console ở đây để Duy thấy dữ liệu thực tế từ Server đổ về hook
-      console.log("📥 [Hook] Data từ API:", Object.keys(response));
+      // ✅ SỬA: Gọi hàm getMetrics và truyền { range } vào
+      // range sẽ là 'day', 'week', hoặc 'month'
+      const response = await api.getMetrics({ range });
+      
+      console.log(`📥 [Hook] Đã tải dữ liệu cho Tab: ${range.toUpperCase()}`);
+      console.log("- Status:", response.status);
+      console.log("- Records thô:", response.raw_data?.length || 0);
+      console.log("- Bản ghi summary:", response.daily_summary?.length || 0);
+      
       setData(response);
       setError(null);
     } catch (err: any) {
@@ -20,7 +26,7 @@ export function useHealthData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range]); // ✅ QUAN TRỌNG: Thêm range vào đây để hàm cập nhật khi Duy đổi tab
 
   useEffect(() => {
     fetchHealthData();

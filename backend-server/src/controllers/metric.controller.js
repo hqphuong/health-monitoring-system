@@ -1,9 +1,5 @@
 import prisma from '../lib/prisma.js';
 
-/**
- * 1. ĐỒNG BỘ DỮ LIỆU THỰC TỪ APP
- * Đảm bảo gộp được stages vào raw_data và chống trùng lặp
- */
 export const syncHealthData = async (req, res) => {
     try {
         const { data } = req.body;
@@ -13,16 +9,12 @@ export const syncHealthData = async (req, res) => {
             return res.status(400).json({ status: "error", message: "Dữ liệu không hợp lệ." });
         }
 
-        console.log(`🚀 Đang xử lý upsert cho ${data.length} bản ghi...`);
-
-        // Chia nhỏ dữ liệu thành từng nhóm 100 bản ghi để tránh timeout
         const chunkSize = 100;
         let totalProcessed = 0;
 
         for (let i = 0; i < data.length; i += chunkSize) {
             const chunk = data.slice(i, i + chunkSize);
             
-            // Xử lý từng cụm (chunk)
             await Promise.all(chunk.map(item => {
                 const recordDate = new Date(item.record_time);
                 return prisma.healthMetric.upsert({
@@ -33,6 +25,7 @@ export const syncHealthData = async (req, res) => {
                         },
                     },
                     update: {
+                        // Sửa lỗi ghi đè: Chỉ cập nhật nếu có dữ liệu mới
                         heart_rate: item.heart_rate ?? undefined,
                         steps: item.steps ?? undefined,
                         sleep_duration: item.sleep_duration ?? undefined,
@@ -55,23 +48,15 @@ export const syncHealthData = async (req, res) => {
                 });
             }));
             totalProcessed += chunk.length;
-            console.log(`✅ Đã xong cụm ${i / chunkSize + 1}, tổng cộng: ${totalProcessed}`);
         }
 
-        return res.status(201).json({ 
-            status: "success", 
-            count: totalProcessed,
-            message: "Đồng bộ thành công (đã dùng Chunking)" 
-        });
+        return res.status(201).json({ status: "success", count: totalProcessed });
     } catch (error) {
         console.error("❌ [Sync Error]:", error.message);
         return res.status(500).json({ status: "error", message: error.message });
     }
 };
-/**
- * 2. LẤY DỮ LIỆU CHO MOBILE
- * Hỗ trợ bóc tách chi tiết stages (Sâu, Nông, REM) cho biểu đồ
- */
+
 export const getHealthMetrics = async (req, res) => {
     try {
         const currentUserId = req.user.user_id;
@@ -80,12 +65,11 @@ export const getHealthMetrics = async (req, res) => {
         const now = new Date();
         let startDate = new Date();
 
-        if (range === 'day') startDate.setHours(0, 0, 0, 0);
+        // Mở rộng khoảng thời gian lấy dữ liệu để tab "Hôm nay" luôn có data ngày gần nhất
+        if (range === 'day') startDate.setDate(now.getDate() - 1); 
         else if (range === 'week') startDate.setDate(now.getDate() - 7);
         else if (range === 'month') startDate.setMonth(now.getMonth() - 1);
-        else startDate.setDate(now.getDate() - 30);
 
-        // Đổi sang healthMetric
         const metrics = await prisma.healthMetric.findMany({
             where: {
                 user_id: currentUserId,
@@ -94,20 +78,20 @@ export const getHealthMetrics = async (req, res) => {
             orderBy: { record_time: 'asc' }
         });
 
-        // Gom nhóm dữ liệu theo ngày
+        // Hàm xử lý ngày chuẩn theo múi giờ địa phương (Việt Nam)
+        const getLocalDate = (date) => {
+            const d = new Date(date);
+            d.setHours(d.getHours() + 7); // Cộng 7 tiếng để khớp giờ VN
+            return d.toISOString().split('T')[0];
+        };
+
         const groups = metrics.reduce((acc, curr) => {
-            const date = curr.record_time.toISOString().split('T')[0];
+            const date = getLocalDate(curr.record_time);
             if (!acc[date]) {
                 acc[date] = { 
-                    steps: 0, 
-                    calories: 0, 
-                    distance: 0, 
-                    sleep_duration: 0,
-                    deep_sleep: 0,
-                    light_sleep: 0,
-                    rem_sleep: 0,
-                    hr_samples: [], 
-                    spo2_samples: [] 
+                    steps: 0, calories: 0, distance: 0, 
+                    sleep_duration: 0, deep_sleep: 0, light_sleep: 0, rem_sleep: 0,
+                    hr_samples: [], spo2_samples: [] 
                 };
             }
             
@@ -118,7 +102,6 @@ export const getHealthMetrics = async (req, res) => {
             
             if (curr.sleep_duration) {
                 g.sleep_duration += curr.sleep_duration;
-                // Phân loại stage dựa trên raw_data
                 const stage = curr.raw_data?.sleep_stages;
                 if (stage === 5) g.deep_sleep += curr.sleep_duration;
                 else if (stage === 4) g.light_sleep += curr.sleep_duration;
@@ -145,9 +128,8 @@ export const getHealthMetrics = async (req, res) => {
                 avg_hr: day.hr_samples.length > 0 
                     ? Math.round(day.hr_samples.reduce((a, b) => a + b) / day.hr_samples.length) 
                     : 0,
-                avg_spo2: day.spo2_samples.length > 0 
-                    ? parseFloat((day.spo2_samples.reduce((a, b) => a + b) / day.spo2_samples.length).toFixed(1)) 
-                    : 0
+                max_hr: day.hr_samples.length > 0 ? Math.max(...day.hr_samples) : 0,
+                min_hr: day.hr_samples.length > 0 ? Math.min(...day.hr_samples) : 0
             };
         });
 
@@ -155,6 +137,7 @@ export const getHealthMetrics = async (req, res) => {
             status: "success",
             view_range: range,
             daily_summary: dailySummary,
+            // Trả về dữ liệu thô đã được map stage để Mobile vẽ Timeline mượt
             raw_data: metrics.map(m => ({
                 ...m,
                 sleep_stage: m.raw_data?.sleep_stages || null 

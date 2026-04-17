@@ -209,11 +209,22 @@ export const api = {
     }),
 
   // ✅ HEALTH METRICS (Dùng cho HomeScreen)
-  getMetrics: (params?: { days?: number }): Promise<MetricsResponse> => {
+  // ✅ HEALTH METRICS (Đã sửa để hỗ trợ cả tham số range: day, week, month)
+  getMetrics: (params?: { range?: string; days?: number }): Promise<MetricsResponse> => {
     let endpoint = ENDPOINTS.METRICS;
-    if (params?.days) {
-        endpoint += `?days=${params.days}`;
+    const queryParams = [];
+
+    // Ưu tiên range (day/week/month) vì Server đang dùng range để group dữ liệu
+    if (params?.range) {
+        queryParams.push(`range=${params.range}`);
+    } else if (params?.days) {
+        queryParams.push(`days=${params.days}`);
     }
+
+    if (queryParams.length > 0) {
+        endpoint += `?${queryParams.join('&')}`;
+    }
+    
     return fetchAPI<MetricsResponse>(endpoint);
   },
 

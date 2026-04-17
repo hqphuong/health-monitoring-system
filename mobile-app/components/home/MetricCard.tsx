@@ -7,17 +7,19 @@ interface MetricCardProps {
   title: string;
   subtitle: string;
   value: string | number;
+  unit?: string; // 1. Thêm dòng này để fix lỗi Property 'unit' does not exist
   icon: keyof typeof Ionicons.glyphMap;
   iconColor: string;
   onPress: () => void;
-  children?: React.ReactNode; // Dùng để chứa Chart hoặc Sleep Stages
-  footer?: React.ReactNode;   // Dùng cho phần thống kê bên dưới (nếu có)
+  children?: React.ReactNode; 
+  footer?: React.ReactNode;   
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({
   title,
   subtitle,
   value,
+  unit, // 2. Nhận biến unit ở đây
   icon,
   iconColor,
   onPress,
@@ -38,7 +40,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.valueText}>{value}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+          <Text style={styles.valueText}>{value}</Text>
+          {/* Hiển thị unit nếu có truyền vào */}
+          {unit && <Text style={styles.unitText}> {unit}</Text>}
+        </View>
         <View style={styles.contentArea}>{children}</View>
       </View>
 
@@ -71,6 +77,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: Typography.fontSizes.xs, color: Colors.neutral.textSecondary },
   body: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   valueText: { fontSize: Typography.fontSizes['3xl'], fontWeight: Typography.fontWeights.bold, color: Colors.neutral.textPrimary },
+  // Style cho unit để nó nhỏ hơn giá trị chính, nhìn chuyên nghiệp hơn
+  unitText: { fontSize: Typography.fontSizes.sm, color: Colors.neutral.textSecondary, fontWeight: '600' },
   contentArea: { flex: 1, alignItems: 'flex-end' },
   footer: {
     flexDirection: 'row',
