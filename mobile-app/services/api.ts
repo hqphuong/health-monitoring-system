@@ -145,7 +145,7 @@ async function fetchAPI<T>(
   }
 
   try {
-    console.log(`🌐 [API] ${options.method || 'GET'} ${url}`);
+    //console.log(`🌐 [API] ${options.method || 'GET'} ${url}`);
 
     const response = await fetch(url, {
       ...options,
@@ -165,7 +165,7 @@ async function fetchAPI<T>(
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error) {
-      console.error(`❌ [API] Error:`, error.message);
+      //console.error(`❌ [API] Error:`, error.message);
     }
     throw error;
   }

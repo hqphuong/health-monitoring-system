@@ -143,17 +143,17 @@ export function useHealthConnect() {
 
       // 8. Đẩy lên Server
       if (finalPayload.length > 0) {
-        console.log(`📡 [Sync] Đang gửi ${finalPayload.length} phút dữ liệu lên Server...`);
+        //console.log(`📡 [Sync] Đang gửi ${finalPayload.length} phút dữ liệu lên Server...`);
         const response = await api.syncMetrics({ data: finalPayload });
-        console.log(`🚀 [Server] Đồng bộ thành công: ${response.count} dòng.`);
+        //console.log(`🚀 [Server] Đồng bộ thành công: ${response.count} dòng.`);
         return true;
       }
 
-      console.log("⚠️ [Sync] Không có dữ liệu mới để đồng bộ.");
+      //console.log("⚠️ [Sync] Không có dữ liệu mới để đồng bộ.");
       return false;
 
     } catch (error: any) {
-      console.error("❌ [Sync Error]:", error.message);
+      //console.error("❌ [Sync Error]:", error.message);
       return false;
     } finally {
       setLoading(false);

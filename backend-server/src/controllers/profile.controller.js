@@ -93,7 +93,7 @@ export const updateHealthProfile = async (req, res) => {
             data: { ...profile, full_name } 
         });
     } catch (error) {
-        console.error("Lỗi Controller:", error);
+        //console.error("Lỗi Controller:", error);
         res.status(500).json({ error: error.message });
     }
 };

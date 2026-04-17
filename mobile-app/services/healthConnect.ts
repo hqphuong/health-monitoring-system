@@ -83,7 +83,7 @@ let isInitialized = false;
 export const initHealthConnect = async (): Promise<HealthConnectStatus> => {
   // Health Connect chỉ có trên Android
   if (Platform.OS !== 'android') {
-    console.log('ℹ️ [HealthConnect] Chỉ hỗ trợ Android');
+    //console.log('ℹ️ [HealthConnect] Chỉ hỗ trợ Android');
     return 'NOT_SUPPORTED';
   }
 
@@ -92,27 +92,27 @@ export const initHealthConnect = async (): Promise<HealthConnectStatus> => {
     const status = await getSdkStatus();
     
     if (status === SdkAvailabilityStatus.SDK_UNAVAILABLE) {
-      console.log('⚠️ [HealthConnect] Health Connect không khả dụng trên thiết bị này');
+      //console.log('⚠️ [HealthConnect] Health Connect không khả dụng trên thiết bị này');
       return 'NOT_SUPPORTED';
     }
     
     if (status === SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
-      console.log('⚠️ [HealthConnect] Cần cập nhật Health Connect app');
+      //console.log('⚠️ [HealthConnect] Cần cập nhật Health Connect app');
       return 'NOT_INSTALLED';
     }
 
     // Initialize
     const initialized = await initialize();
     if (!initialized) {
-      console.error('❌ [HealthConnect] Không thể khởi tạo');
+      //console.error('❌ [HealthConnect] Không thể khởi tạo');
       return 'ERROR';
     }
 
     isInitialized = true;
-    console.log('✅ [HealthConnect] Đã khởi tạo thành công');
+    //console.log('✅ [HealthConnect] Đã khởi tạo thành công');
     return 'AVAILABLE';
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi khởi tạo:', error);
+    //console.error('❌ [HealthConnect] Lỗi khởi tạo:', error);
     return 'ERROR';
   }
 };
@@ -130,10 +130,10 @@ export const requestHealthPermissions = async (): Promise<boolean> => {
 
   try {
     const granted = await requestPermission(HEALTH_PERMISSIONS);
-    console.log('✅ [HealthConnect] Quyền được cấp:', granted);
+    //console.log('✅ [HealthConnect] Quyền được cấp:', granted);
     return granted.length > 0;
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi yêu cầu quyền:', error);
+    //console.error('❌ [HealthConnect] Lỗi yêu cầu quyền:', error);
     return false;
   }
 };
@@ -165,7 +165,7 @@ export const readHeartRateData = async (
     });
 
     if (!result.records || result.records.length === 0) {
-      console.log('ℹ️ [HealthConnect] Không có dữ liệu nhịp tim');
+      //console.log('ℹ️ [HealthConnect] Không có dữ liệu nhịp tim');
       return null;
     }
 
@@ -199,7 +199,7 @@ export const readHeartRateData = async (
       samples: samples.slice(-50), // Giữ 50 mẫu gần nhất
     };
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi đọc nhịp tim:', error);
+    //console.error('❌ [HealthConnect] Lỗi đọc nhịp tim:', error);
     return null;
   }
 };
@@ -268,7 +268,7 @@ export const readStepsData = async (
       history: [], // Có thể thêm logic lấy lịch sử 7 ngày
     };
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi đọc bước chân:', error);
+    //console.error('❌ [HealthConnect] Lỗi đọc bước chân:', error);
     return null;
   }
 };
@@ -294,7 +294,7 @@ export const readSleepData = async (
     });
 
     if (!result.records || result.records.length === 0) {
-      console.log('ℹ️ [HealthConnect] Không có dữ liệu giấc ngủ');
+      //console.log('ℹ️ [HealthConnect] Không có dữ liệu giấc ngủ');
       return null;
     }
 
@@ -324,7 +324,7 @@ export const readSleepData = async (
       stages,
     };
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi đọc giấc ngủ:', error);
+    //console.error('❌ [HealthConnect] Lỗi đọc giấc ngủ:', error);
     return null;
   }
 };
@@ -370,7 +370,7 @@ export const readOxygenData = async (
       max: maxOxygen,
     };
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi đọc SpO2:', error);
+    //console.error('❌ [HealthConnect] Lỗi đọc SpO2:', error);
     return null;
   }
 };
@@ -386,13 +386,13 @@ export const readAllHealthData = async (): Promise<HealthConnectData | null> => 
   const status = await initHealthConnect();
   
   if (status !== 'AVAILABLE') {
-    console.log('⚠️ [HealthConnect] Không khả dụng:', status);
+    //console.log('⚠️ [HealthConnect] Không khả dụng:', status);
     return null;
   }
 
   const hasPermission = await requestHealthPermissions();
   if (!hasPermission) {
-    console.log('⚠️ [HealthConnect] Chưa có quyền truy cập');
+    //console.log('⚠️ [HealthConnect] Chưa có quyền truy cập');
     return null;
   }
 
@@ -446,15 +446,15 @@ export const syncHealthDataToServer = async (
     const data = await readAllHealthData();
     
     if (!data) {
-      console.log('⚠️ [HealthConnect] Không có dữ liệu để đồng bộ');
+      //console.log('⚠️ [HealthConnect] Không có dữ liệu để đồng bộ');
       return false;
     }
 
     await apiSyncFunction(data);
-    console.log('✅ [HealthConnect] Đã đồng bộ dữ liệu lên server');
+    //console.log('✅ [HealthConnect] Đã đồng bộ dữ liệu lên server');
     return true;
   } catch (error) {
-    console.error('❌ [HealthConnect] Lỗi đồng bộ:', error);
+    //console.error('❌ [HealthConnect] Lỗi đồng bộ:', error);
     return false;
   }
 };

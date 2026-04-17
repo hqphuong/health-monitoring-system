@@ -61,7 +61,7 @@ export const googleAuth = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Lỗi xác thực Google:", error);
+        //console.error("Lỗi xác thực Google:", error);
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
@@ -112,11 +112,11 @@ export const registerUser = async (req, res) => {
         return newUser;
       });
 
-      // ---------------- DEBUG CONSOLE ĐĂNG KÝ ----------------
-      console.log("=========================================");
-      console.log(`🚀 [REGISTER OTP] Email: ${email}`);
-      console.log(`🔑 [REGISTER OTP] Mã xác nhận của bạn là: ${otp}`);
-      console.log("=========================================");
+      // ---------------- DEBUG //console ĐĂNG KÝ ----------------
+      //console.log("=========================================");
+      //console.log(`🚀 [REGISTER OTP] Email: ${email}`);
+      //console.log(`🔑 [REGISTER OTP] Mã xác nhận của bạn là: ${otp}`);
+      //console.log("=========================================");
 
       // 5. Gửi email xác nhận
       const htmlTemplate = `
@@ -141,7 +141,7 @@ export const registerUser = async (req, res) => {
 
       return res.status(201).json({
           status: "success",
-          message: "Đăng ký thành công. Vui lòng kiểm tra email (hoặc console server) để lấy mã.",
+          message: "Đăng ký thành công. Vui lòng kiểm tra email (hoặc //console server) để lấy mã.",
           data: { 
               user: { user_id: user.user_id, email: user.email, full_name: user.full_name },
               debug_otp: otp 
@@ -149,7 +149,7 @@ export const registerUser = async (req, res) => {
       });
 
   } catch (error) {
-    console.error("❌ Lỗi đăng ký chi tiết:", error);
+    //console.error("❌ Lỗi đăng ký chi tiết:", error);
     return res.status(500).json({ status: "error", message: "Lỗi máy chủ: " + error.message });
   }
 };
@@ -195,7 +195,7 @@ export const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Lỗi đăng nhập:", error);
+        //console.error("Lỗi đăng nhập:", error);
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
@@ -222,11 +222,11 @@ export const forgotPassword = async (req, res) => {
             }
         });
 
-        // ---------------- DEBUG CONSOLE QUÊN MK ----------------
-        console.log("=========================================");
-        console.log(`🔓 [FORGOT PASSWORD] Email: ${email}`);
-        console.log(`🔑 [FORGOT PASSWORD] Mã OTP khôi phục là: ${otp}`);
-        console.log("=========================================");
+        // ---------------- DEBUG //console QUÊN MK ----------------
+        //console.log("=========================================");
+        //console.log(`🔓 [FORGOT PASSWORD] Email: ${email}`);
+        //console.log(`🔑 [FORGOT PASSWORD] Mã OTP khôi phục là: ${otp}`);
+        //console.log("=========================================");
 
         const htmlTemplate = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -245,7 +245,7 @@ export const forgotPassword = async (req, res) => {
             sendEmail(email, "Mã xác nhận khôi phục mật khẩu - HealthGuard", htmlTemplate)
                 .catch(err => console.error("❌ Mail Service Error:", err.message));
         } catch (mailError) {
-            console.error("❌ Lỗi thực thi sendEmail:", mailError.message);
+            //console.error("❌ Lỗi thực thi sendEmail:", mailError.message);
         }
 
         return res.status(200).json({
@@ -255,7 +255,7 @@ export const forgotPassword = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Lỗi ForgotPassword:", error);
+        //console.error("❌ Lỗi ForgotPassword:", error);
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
@@ -301,7 +301,7 @@ export const resetPassword = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Lỗi ResetPassword:", error);
+        //console.error("❌ Lỗi ResetPassword:", error);
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };
@@ -363,7 +363,7 @@ export const verifyOTP = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Lỗi VerifyOTP:", error);
+        //console.error("❌ Lỗi VerifyOTP:", error);
         return res.status(500).json({ status: "error", message: "Lỗi máy chủ nội bộ." });
     }
 };

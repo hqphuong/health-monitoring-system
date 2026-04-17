@@ -124,7 +124,7 @@ export function useSleepDetail() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi không xác định';
       setError(message);
-      console.warn('⚠️ [useSleepDetail] Lỗi:', message);
+      //console.warn('⚠️ [useSleepDetail] Lỗi:', message);
     } finally {
       setLoading(false);
     }

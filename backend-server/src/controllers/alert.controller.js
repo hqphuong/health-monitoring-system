@@ -17,7 +17,7 @@ export const getAlerts = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(">>> LỖI GET ALERTS:", error);
+        //console.error(">>> LỖI GET ALERTS:", error);
         return res.status(500).json({ status: "error", message: error.message });
     }
 };

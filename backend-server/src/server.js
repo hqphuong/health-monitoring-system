@@ -8,11 +8,9 @@ const app = express();
 // CẤU HÌNH MIDDLEWARE
 // ===========================================
 
-// Tăng giới hạn payload để xử lý dữ liệu đồng bộ lớn (lỗi PayloadTooLargeError)
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Middleware để debug: Xem dữ liệu React Native gửi lên có gì
 app.use((req, res, next) => {
     if (req.originalUrl.includes('/sync') || req.method === 'POST') {
         const recordCount = req.body?.metrics?.length || 0;

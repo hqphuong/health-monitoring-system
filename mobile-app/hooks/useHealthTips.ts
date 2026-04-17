@@ -34,7 +34,7 @@ export function useHealthTips(): UseHealthTipsReturn {
       const data = await api.getHealthTipCategories();
       setCategories(data);
     } catch (err) {
-      console.warn('Không thể lấy danh sách categories:', err);
+      //console.warn('Không thể lấy danh sách categories:', err);
     }
   }, []);
 
@@ -49,7 +49,7 @@ export function useHealthTips(): UseHealthTipsReturn {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi khi lấy mẹo sức khỏe';
       setError(message);
-      console.error('❌ [useHealthTips] Lỗi:', err);
+      //console.error('❌ [useHealthTips] Lỗi:', err);
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ export function useHealthTips(): UseHealthTipsReturn {
       const tip = await api.getRandomHealthTip();
       setRandomTip(tip);
     } catch (err) {
-      console.warn('Không thể lấy tip ngẫu nhiên:', err);
+      //console.warn('Không thể lấy tip ngẫu nhiên:', err);
     }
   }, []);
 

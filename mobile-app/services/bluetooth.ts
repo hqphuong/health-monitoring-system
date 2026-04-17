@@ -190,7 +190,7 @@ export const connectToDevice = async (deviceId: string): Promise<Device> => {
   connectedDeviceId = device.id;
   await persistConnectedDeviceId(device.id);
 
-  console.log(`✅ [BLE] Connected to ${device.name}`);
+  //console.log(`✅ [BLE] Connected to ${device.name}`);
   return device;
 };
 
@@ -204,7 +204,7 @@ export const disconnectDevice = async (deviceId: string): Promise<void> => {
     connectedDeviceId = null;
   }
   await clearPersistedConnectedDeviceId();
-  console.log(`✅ [BLE] Disconnected from ${deviceId}`);
+  //console.log(`✅ [BLE] Disconnected from ${deviceId}`);
 };
 
 /**

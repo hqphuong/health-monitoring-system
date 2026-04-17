@@ -26,9 +26,9 @@ export const saveDeviceName = async (deviceId: string, deviceName: string): Prom
     } else {
       await SecureStore.setItemAsync(DEVICE_NAMES_KEY, jsonData);
     }
-    console.log(`✅ [DeviceStorage] Đã lưu tên thiết bị: ${deviceId} -> ${deviceName}`);
+    //console.log(`✅ [DeviceStorage] Đã lưu tên thiết bị: ${deviceId} -> ${deviceName}`);
   } catch (error) {
-    console.error('❌ [DeviceStorage] Lỗi lưu tên thiết bị:', error);
+    //console.error('❌ [DeviceStorage] Lỗi lưu tên thiết bị:', error);
   }
 };
 
@@ -54,7 +54,7 @@ export const getDeviceName = async (deviceId: string): Promise<string | null> =>
       return deviceNamesCache[deviceId] || null;
     }
   } catch (error) {
-    console.error('❌ [DeviceStorage] Lỗi đọc tên thiết bị:', error);
+    //console.error('❌ [DeviceStorage] Lỗi đọc tên thiết bị:', error);
   }
   
   return null;
@@ -77,7 +77,7 @@ export const getAllDeviceNames = async (): Promise<Record<string, string>> => {
       return deviceNamesCache;
     }
   } catch (error) {
-    console.error('❌ [DeviceStorage] Lỗi đọc danh sách thiết bị:', error);
+    //console.error('❌ [DeviceStorage] Lỗi đọc danh sách thiết bị:', error);
   }
   
   return {};
@@ -96,8 +96,8 @@ export const removeDeviceName = async (deviceId: string): Promise<void> => {
     } else {
       await SecureStore.setItemAsync(DEVICE_NAMES_KEY, jsonData);
     }
-    console.log(`✅ [DeviceStorage] Đã xóa tên thiết bị: ${deviceId}`);
+    //console.log(`✅ [DeviceStorage] Đã xóa tên thiết bị: ${deviceId}`);
   } catch (error) {
-    console.error('❌ [DeviceStorage] Lỗi xóa tên thiết bị:', error);
+    //console.error('❌ [DeviceStorage] Lỗi xóa tên thiết bị:', error);
   }
 };

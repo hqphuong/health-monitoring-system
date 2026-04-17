@@ -85,7 +85,7 @@ export default function UserInfoScreen() {
         weight: weight ? parseFloat(weight) : undefined,
       });
 
-      console.log('✅ User info saved successfully');
+      //console.log('✅ User info saved successfully');
       
       // QUAN TRỌNG: Cập nhật trạng thái Auth toàn cục trước khi chuyển màn hình
       setIsAuthenticated(true);
@@ -94,7 +94,7 @@ export default function UserInfoScreen() {
       router.replace('/(tabs)');
       
     } catch (error) {
-      console.error('❌ Error saving user info:', error);
+      //console.error('❌ Error saving user info:', error);
       const message = error instanceof Error ? error.message : 'Có lỗi xảy ra';
       
       if (message.includes('PROFILE_INCOMPLETE')) {

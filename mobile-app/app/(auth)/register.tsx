@@ -73,7 +73,7 @@ export default function RegisterScreen() {
         full_name: "Người dùng mới",
       });
 
-      console.log('✅ Register response:', response);
+      //console.log('✅ Register response:', response);
 
       // Chuyển đến màn hình xác thực OTP
       router.push({
@@ -81,7 +81,7 @@ export default function RegisterScreen() {
         params: { email, type: 'register' },
       });
     } catch (error) {
-      console.error('❌ Register error:', error);
+      //console.error('❌ Register error:', error);
       const message = error instanceof Error ? error.message : 'Đăng ký thất bại';
 
       // Xử lý các lỗi cụ thể từ API

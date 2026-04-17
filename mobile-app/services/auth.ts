@@ -33,9 +33,9 @@ export const saveToken = async (token: string): Promise<void> => {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
     }
     cachedToken = token;
-    console.log('✅ [Auth] Token saved successfully');
+    //console.log('✅ [Auth] Token saved successfully');
   } catch (error) {
-    console.error('❌ [Auth] Failed to save token:', error);
+    //console.error('❌ [Auth] Failed to save token:', error);
     throw error;
   }
 };
@@ -61,7 +61,7 @@ export const getToken = async (): Promise<string | null> => {
     cachedToken = token;
     return token;
   } catch (error) {
-    console.error('❌ [Auth] Failed to get token:', error);
+    //console.error('❌ [Auth] Failed to get token:', error);
     return null;
   }
 };
@@ -79,9 +79,9 @@ export const removeToken = async (): Promise<void> => {
       await SecureStore.deleteItemAsync(USER_KEY);
     }
     cachedToken = null;
-    console.log('✅ [Auth] Token removed (logged out)');
+    //console.log('✅ [Auth] Token removed (logged out)');
   } catch (error) {
-    console.error('❌ [Auth] Failed to remove token:', error);
+    //console.error('❌ [Auth] Failed to remove token:', error);
     throw error;
   }
 };
@@ -116,9 +116,9 @@ export const saveUserData = async (userData: UserData): Promise<void> => {
     } else {
       await SecureStore.setItemAsync(USER_KEY, jsonData);
     }
-    console.log('✅ [Auth] User data saved');
+    //console.log('✅ [Auth] User data saved');
   } catch (error) {
-    console.error('❌ [Auth] Failed to save user data:', error);
+    //console.error('❌ [Auth] Failed to save user data:', error);
     throw error;
   }
 };
@@ -141,7 +141,7 @@ export const getUserData = async (): Promise<UserData | null> => {
     }
     return null;
   } catch (error) {
-    console.error('❌ [Auth] Failed to get user data:', error);
+    //console.error('❌ [Auth] Failed to get user data:', error);
     return null;
   }
 };

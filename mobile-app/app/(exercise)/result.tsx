@@ -84,7 +84,7 @@ export default function ExerciseResultScreen() {
         message: `🏃 Tôi vừa hoàn thành buổi ${params.workoutName}!\n⏱ Thời gian: ${formatDuration(duration)}\n🔥 ${calories} kcal\n❤️ Nhịp tim TB: ${avgHeartRate} BPM\n\n#HealthGuard #Fitness`,
       });
     } catch (error) {
-      console.error(error);
+      //console.error(error);
     }
   };
 

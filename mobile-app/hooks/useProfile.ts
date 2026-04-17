@@ -102,7 +102,7 @@ export function useProfile(): UseProfileReturn {
       try {
         profileData = await api.getProfile();
       } catch (e) {
-        console.warn('⚠️ [useProfile] Không thể lấy profile từ API');
+        //console.warn('⚠️ [useProfile] Không thể lấy profile từ API');
       }
 
       // Tính toán các giá trị
@@ -128,7 +128,7 @@ export function useProfile(): UseProfileReturn {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi không xác định';
       setError(message);
-      console.error('❌ [useProfile] Lỗi:', message);
+      //console.error('❌ [useProfile] Lỗi:', message);
     } finally {
       setLoading(false);
     }

@@ -29,7 +29,7 @@ export default function NotificationsScreen() {
         setAlerts(res.data);
       }
     } catch (err) {
-      console.error('Fetch alerts error:', err);
+      //console.error('Fetch alerts error:', err);
       setError('Không thể tải lịch sử cảnh báo.');
     } finally {
       setLoading(false);

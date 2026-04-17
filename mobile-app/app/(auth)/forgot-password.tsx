@@ -43,7 +43,7 @@ export default function ForgotPasswordScreen() {
       // Gọi API gửi OTP reset password
       const response = await api.forgotPassword({ email: email.trim() });
       
-      console.log('✅ Forgot password response:', response);
+      //console.log('✅ Forgot password response:', response);
 
       // Chuyển đến màn hình xác thực OTP
       router.push({
@@ -51,7 +51,7 @@ export default function ForgotPasswordScreen() {
         params: { email, type: 'forgot-password' },
       });
     } catch (err) {
-      console.error('❌ Forgot password error:', err);
+      //console.error('❌ Forgot password error:', err);
       const message = err instanceof Error ? err.message : 'Có lỗi xảy ra';
       
       if (message.includes('404') || message.toLowerCase().includes('not found')) {

@@ -87,7 +87,7 @@ export default function EmergencyContactsScreen() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi không xác định';
       setError(message);
-      console.warn('⚠️ Không thể lấy danh sách liên hệ:', message);
+      //console.warn('⚠️ Không thể lấy danh sách liên hệ:', message);
     } finally {
       setLoading(false);
       setRefreshing(false);

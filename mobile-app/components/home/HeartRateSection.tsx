@@ -11,12 +11,12 @@ interface HeartRateSectionProps {
 }
 
 const HeartRateSection: React.FC<HeartRateSectionProps> = ({ current, avg, history }) => {
-  // --- DEBUG CONSOLE ---
-  console.log('--- [DEBUG HEART RATE SECTION] ---');
-  console.log('Current (Gần nhất):', current);
-  console.log('Avg (Trung bình):', avg);
-  console.log('History (Mảng lịch sử):', history);
-  console.log('Số lượng điểm đo trong mảng:', history?.length || 0);
+  // --- DEBUG //console ---
+  //console.log('--- [DEBUG HEART RATE SECTION] ---');
+  //console.log('Current (Gần nhất):', current);
+  //console.log('Avg (Trung bình):', avg);
+  //console.log('History (Mảng lịch sử):', history);
+  //console.log('Số lượng điểm đo trong mảng:', history?.length || 0);
   // ---------------------
 
   // Tính toán các chỉ số bổ sung
@@ -44,7 +44,7 @@ const HeartRateSection: React.FC<HeartRateSectionProps> = ({ current, avg, histo
           {history && history.length > 0 ? (
             history.map((v: number, i: number) => {
                 // Log thử chiều cao của bar đầu tiên để check logic vẽ
-                if(i === 0) console.log('Mẫu bar height:', ((v - chartMin) / range) * 30 + 5);
+                if(i === 0) //console.log('Mẫu bar height:', ((v - chartMin) / range) * 30 + 5);
                 
                 return (
                   <View

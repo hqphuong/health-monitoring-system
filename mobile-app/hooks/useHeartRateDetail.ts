@@ -110,7 +110,7 @@ export function useHeartRateDetail() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi không xác định';
       setError(message);
-      console.warn('⚠️ [useHeartRateDetail] Lỗi:', message);
+      //console.warn('⚠️ [useHeartRateDetail] Lỗi:', message);
     } finally {
       setLoading(false);
     }

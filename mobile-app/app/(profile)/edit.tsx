@@ -63,7 +63,7 @@ export default function EditProfileScreen() {
           setBloodType((profile.blood_type as BloodType) || 'O+');
         }
       } catch (err) {
-        console.warn('Could not load profile:', err);
+        //console.warn('Could not load profile:', err);
       } finally {
         setInitialLoading(false);
       }
@@ -107,7 +107,7 @@ export default function EditProfileScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
-      console.error('Update error:', error);
+      //console.error('Update error:', error);
       Alert.alert('Lỗi', 'Không thể cập nhật thông tin. Vui lòng thử lại.');
     } finally {
       setLoading(false);

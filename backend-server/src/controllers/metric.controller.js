@@ -52,7 +52,7 @@ export const syncHealthData = async (req, res) => {
 
         return res.status(201).json({ status: "success", count: totalProcessed });
     } catch (error) {
-        console.error("❌ [Sync Error]:", error.message);
+        //console.error("❌ [Sync Error]:", error.message);
         return res.status(500).json({ status: "error", message: error.message });
     }
 };
@@ -144,7 +144,7 @@ export const getHealthMetrics = async (req, res) => {
             }))
         });
     } catch (error) {
-        console.error("❌ Lỗi lấy Metrics:", error.message);
+        //console.error("❌ Lỗi lấy Metrics:", error.message);
         return res.status(500).json({ status: "error", message: error.message });
     }
 };

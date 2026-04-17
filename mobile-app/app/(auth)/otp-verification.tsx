@@ -95,7 +95,7 @@ export default function OTPVerificationScreen() {
         await loginSuccess(response.token, response.user); // Lưu SecureStore
         setAuthToken(response.token); // Lưu vào biến cachedToken trong api.ts
         
-        console.log('✅ Xác thực thành công & Đã có Token');
+        //console.log('✅ Xác thực thành công & Đã có Token');
         
         // 3. Chuyển sang màn hình nhập thông tin (Lúc này updateProfile sẽ chạy OK)
         router.push('/(auth)/user-info');
@@ -104,7 +104,7 @@ export default function OTPVerificationScreen() {
       // ... giữ nguyên logic reset password ...
     }
   } catch (err) {
-    console.error('❌ Lỗi xác thực:', err);
+    //console.error('❌ Lỗi xác thực:', err);
     setError('Mã OTP không đúng hoặc đã hết hạn.');
   } finally {
     setLoading(false);
@@ -128,7 +128,7 @@ export default function OTPVerificationScreen() {
       
       Alert.alert('Thành công', 'Mã OTP mới đã được gửi đến email của bạn.');
     } catch (err) {
-      console.error('❌ Resend OTP error:', err);
+      //console.error('❌ Resend OTP error:', err);
       Alert.alert('Lỗi', 'Không thể gửi lại mã. Vui lòng thử lại sau.');
     }
   };
