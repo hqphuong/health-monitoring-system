@@ -15,8 +15,8 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// middleware
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // REST API
 app.use('/api/v1', apiRoutes);
@@ -28,7 +28,6 @@ setupSwagger(app);
 io.on('connection', (socket) => {
 
     socket.on('start_session', async ({ user_id }) => {
-
         const session = await prisma.workoutSession.create({
             data: {
                 user_id,
@@ -46,9 +45,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('stream_metric', async (payload) => {
-
         const { metrics } = payload;
-
         for (const metric of metrics) {
             pushToQueue(() =>
                 processMetricJob(metric, socket, io)
