@@ -1,23 +1,13 @@
 import prisma from '../lib/prisma.js';
 
-<<<<<<< HEAD
-
-export const getHealthProfile = async (req, res) => {
-    try {
-        // Kiểm tra xem req.user có tồn tại không để tránh crash server
-=======
 // 1. Lấy thông tin hồ sơ (kèm thông tin từ bảng User)
 export const getHealthProfile = async (req, res) => {
     try {
->>>>>>> origin/FE
         if (!req.user) {
             return res.status(401).json({ error: "Không tìm thấy thông tin xác thực người dùng" });
         }
 
         const profile = await prisma.healthProfile.findUnique({
-<<<<<<< HEAD
-            where: { user_id: req.user.user_id } 
-=======
             where: { user_id: req.user.user_id },
             include: {
                 user: {
@@ -27,16 +17,12 @@ export const getHealthProfile = async (req, res) => {
                     }
                 }
             }
->>>>>>> origin/FE
         });
 
         if (!profile) {
             return res.status(404).json({ message: "Người dùng chưa tạo hồ sơ sức khỏe" });
         }
 
-<<<<<<< HEAD
-        res.status(200).json(profile);
-=======
         // Làm phẳng dữ liệu để Frontend dễ dùng (gom full_name ra ngoài)
         const responseData = {
             ...profile,
@@ -46,27 +32,11 @@ export const getHealthProfile = async (req, res) => {
         delete responseData.user;
 
         res.status(200).json(responseData);
->>>>>>> origin/FE
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-<<<<<<< HEAD
-export const updateHealthProfile = async (req, res) => {
-    const { height, weight, gender,birth, systolic_bp, diastolic_bp } = req.body;
-    try {
-        const profile = await prisma.healthProfile.upsert({
-            where: { user_id: req.user.user_id },
-            update: { height, weight, gender, birth, systolic_bp, diastolic_bp },
-            create: { 
-                user_id: req.user.user_id, 
-                height, weight, gender, birth, systolic_bp, diastolic_bp
-            },
-        });
-        res.status(200).json({ message: "Cập nhật thành công", data: profile });
-    } catch (error) {
-=======
 // 2. Cập nhật hồ sơ (Cập nhật cả User và HealthProfile)
 export const updateHealthProfile = async (req, res) => {
     const { 
@@ -124,7 +94,6 @@ export const updateHealthProfile = async (req, res) => {
         });
     } catch (error) {
         //console.error("Lỗi Controller:", error);
->>>>>>> origin/FE
         res.status(500).json({ error: error.message });
     }
 };

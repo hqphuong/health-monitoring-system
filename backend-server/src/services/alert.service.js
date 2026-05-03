@@ -107,7 +107,6 @@ export const evaluateHealthData = (metric, userAge = 25, isResting = true) => {
         level: "NORMAL", 
         message: "Các chỉ số cơ thể đang ở trạng thái an toàn." 
     };
-<<<<<<< HEAD
 };
 
 export const processAdvancedAlert = async (userId, workId, latestMetric, aiResult) => {
@@ -123,6 +122,5 @@ export const processAdvancedAlert = async (userId, workId, latestMetric, aiResul
     }
 
     return finalDecision;
-=======
->>>>>>> origin/FE
+
 };

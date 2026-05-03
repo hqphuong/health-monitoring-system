@@ -21,17 +21,11 @@ export const sendEmail = async (to, subject, htmlContent) => {
 
         // Tiến hành gửi
         const info = await transporter.sendMail(mailOptions);
-<<<<<<< HEAD
         console.log("💌 Email đã được gửi thành công tới: " + info.accepted);
         return true;
     } catch (error) {
         console.error("❌ Lỗi khi gửi email:", error);
-=======
-        //console.log("💌 Email đã được gửi thành công tới: " + info.accepted);
-        return true;
-    } catch (error) {
-        //console.error("❌ Lỗi khi gửi email:", error);
->>>>>>> origin/FE
+
         throw error;
     }
 };
