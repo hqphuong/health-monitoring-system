@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "108716607237",
+    "project_id": "healthguard-new",
+    "storage_bucket": "healthguard-new.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:108716607237:android:bad4e7a43c4460fda9996c",
+        "android_client_info": {
+          "package_name": "com.namhu147.mobileapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "108716607237-gjco0b93vpn3muv9a41cmsrla5es8f1j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.namhu147.mobileapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "108716607237-uhfctsgtmllj82dbc003okchlhk9tqhn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUCnC1-y0SGfV7GWPwzXXDRTBzurkKdxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "108716607237-uhfctsgtmllj82dbc003okchlhk9tqhn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

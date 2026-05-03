@@ -24,3 +24,7 @@ ai-service/*.pyc
 
 .env
 .env.local
+
+!mobile-app/android/app/google-services.json
+!mobile-app/android/app/debug.keystore
+#!.android/
