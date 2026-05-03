@@ -277,6 +277,20 @@ export const api = {
     fetchAPI<any>(`${ENDPOINTS.DEVICES || '/devices'}/${deviceId}`, {
       method: 'DELETE',
     }),
+
+  getRelatives: (): Promise<any> => 
+    fetchAPI<any>(ENDPOINTS.RELATIVES), // Gọi tới '/relatives'
+
+  addRelative: (payload: { name: string; phone: string; relationship: string }): Promise<any> =>
+    fetchAPI<any>(ENDPOINTS.RELATIVES, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  deleteRelative: (relativeId: string): Promise<any> =>
+    fetchAPI<any>(`${ENDPOINTS.RELATIVES}/${relativeId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export default api;

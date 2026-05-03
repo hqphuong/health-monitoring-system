@@ -41,7 +41,8 @@
         "android.permission.health.READ_TOTAL_CALORIES_BURNED",
         "android.permission.health.READ_BASAL_METABOLIC_RATE"
       ],
-      "package": "com.namhu147.mobileapp"
+      "package": "com.namhu147.mobileapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",

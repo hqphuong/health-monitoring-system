@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Button, Input, Logo } from '../../components';
-import { Colors, Typography, Spacing, BorderRadius } from '../../constants/Colors';
+import { Colors, Typography, Spacing } from '../../constants/Colors';
 import { loginSuccess } from '../../services/auth';
 import { setAuthToken } from '../../services/api';
 import { API_CONFIG, ENDPOINTS } from '../../config/api';
@@ -23,6 +24,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '108716607237-uhfctsgtmllj82dbc003okchlhk9tqhn.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
 
   const extractLoginPayload = (payload: any) => {
     const token =
@@ -35,79 +43,115 @@ export default function LoginScreen() {
       null;
 
     const user = payload?.user || payload?.data?.user || null;
-
     return { token, user };
   };
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
-
     if (!email.trim()) {
       newErrors.email = 'Vui lòng nhập email hoặc số điện thoại';
     } else if (!email.includes('@') && !/^\d{10,11}$/.test(email)) {
       newErrors.email = 'Email hoặc số điện thoại không hợp lệ';
     }
-
     if (!password) {
       newErrors.password = 'Vui lòng nhập mật khẩu';
     } else if (password.length < 6) {
       newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async () => {
     if (!validateForm()) return;
-
     setLoading(true);
     try {
-      // Gọi API login thật
       const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.AUTH_LOGIN}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setErrors({ email: data.message || 'Đăng nhập thất bại' });
+        return;
+      }
+      const { token, user } = extractLoginPayload(data);
+      if (!token) {
+        setErrors({ email: 'Phản hồi đăng nhập không hợp lệ từ server' });
+        return;
+      }
+      await loginSuccess(token, {
+        user_id: String(user?.user_id || data?.user_id || ''),
+        email: String(user?.email || email),
+      });
+      setAuthToken(token);
+      setIsAuthenticated(true);
+      router.replace('/(tabs)');
+    } catch (error) {
+      setErrors({ email: 'Không thể kết nối server. Vui lòng thử lại.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+      }
+
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        setErrors({ email: 'Không thể lấy token từ Google' });
+        return;
+      }
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.AUTH_GOOGLE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email,
-          password: password,
+          id_token: idToken,
         }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        // Hiển thị lỗi từ server
-        setErrors({ email: data.message || 'Đăng nhập thất bại' });
+      if (!response.ok || data.status === "error") {
+        setErrors({ email: data.message || 'Xác thực Google với server thất bại' });
         return;
       }
 
       const { token, user } = extractLoginPayload(data);
 
       if (!token) {
-        console.error('❌ Login response thiếu token hợp lệ:', data);
-        setErrors({ email: data?.message || 'Phản hồi đăng nhập không hợp lệ từ server' });
+        setErrors({ email: 'Server không trả về access token' });
         return;
       }
 
-      // Lưu token vào secure storage
       await loginSuccess(token, {
-        user_id: String(user?.user_id || data?.user_id || ''),
-        email: String(user?.email || email),
+        user_id: String(user?.user_id || ''),
+        email: String(user?.email || ''),
       });
       
-      // Set token vào cache để dùng cho API calls
       setAuthToken(token);
-      
-      // Cập nhật global auth state
       setIsAuthenticated(true);
       
-      console.log('✅ Đăng nhập thành công, token đã lưu');
+      console.log('✅ Đăng nhập Google thành công với tài khoản mới');
       router.replace('/(tabs)');
-    } catch (error) {
-      console.error('❌ Lỗi đăng nhập:', error);
-      setErrors({ email: 'Không thể kết nối server. Vui lòng thử lại.' });
+    } catch (error: any) {
+      console.error('❌ Lỗi Google Login:', error);
+      if (error.code !== 'SIGN_IN_CANCELLED') {
+        setErrors({ email: 'Lỗi xác thực Google. Hãy thử lại.' });
+      }
     } finally {
       setLoading(false);
     }
@@ -125,16 +169,12 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
           <View style={styles.header}>
             <Logo size="lg" />
             <Text style={styles.welcomeText}>Chào mừng trở lại!</Text>
-            <Text style={styles.subtitleText}>
-              Đăng nhập để theo dõi sức khỏe của bạn
-            </Text>
+            <Text style={styles.subtitleText}>Đăng nhập để theo dõi sức khỏe của bạn</Text>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
             <Input
               label="Email hoặc Số điện thoại"
@@ -172,23 +212,20 @@ export default function LoginScreen() {
               size="lg"
             />
 
-            {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>hoặc</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social Login */}
             <Button
               title="Tiếp tục với Google"
               variant="outline"
-              onPress={() => {}}
+              onPress={handleGoogleLogin}
               size="lg"
             />
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               Chưa có tài khoản?{' '}

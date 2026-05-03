@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,235 +13,152 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Button, Input, Logo } from '../../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants/Colors';
-import { api } from '../../services/api';
+import { api, setAuthToken } from '../../services/api';
+import { loginSuccess } from '../../services/auth';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<{
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({});
+  const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string;}>({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '108716607237-uhfctsgtmllj82dbc003okchlhk9tqhn.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
-
-    // Validate email/phone
     if (!email.trim()) {
       newErrors.email = 'Vui lòng nhập email hoặc số điện thoại';
     } else if (!email.includes('@') && !/^\d{10,11}$/.test(email)) {
       newErrors.email = 'Email hoặc số điện thoại không hợp lệ';
     }
-
-    // Validate password
     if (!password) {
       newErrors.password = 'Vui lòng nhập mật khẩu';
     } else if (password.length < 6) {
       newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    } else if (!/[A-Z]/.test(password)) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 1 chữ in hoa';
-    } else if (!/[0-9]/.test(password)) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 1 số';
     }
-
-    // Validate confirm password
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng nhập lại mật khẩu';
-    } else if (confirmPassword !== password) {
+    if (confirmPassword !== password) {
       newErrors.confirmPassword = 'Mật khẩu không khớp';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // LUỒNG 1: Đăng ký thường -> Vẫn giữ nguyên đường dẫn tới OTP của bạn
   const handleRegister = async () => {
     if (!validateForm()) return;
-
     setLoading(true);
     try {
-      // Gọi API đăng ký
-      const response = await api.register({
+      await api.register({
         email: email.trim(),
         password: password,
         confirm_password: confirmPassword,
         full_name: "Người dùng mới",
       });
-
-      //console.log('✅ Register response:', response);
-
-      // Chuyển đến màn hình xác thực OTP
+      
+      // Giữ nguyên logic cũ của bạn
       router.push({
         pathname: '/(auth)/otp-verification',
         params: { email, type: 'register' },
       });
-    } catch (error) {
-      //console.error('❌ Register error:', error);
-      const message = error instanceof Error ? error.message : 'Đăng ký thất bại';
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.message || 'Đăng ký thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Xử lý các lỗi cụ thể từ API
-      if (message.includes('409') || message.toLowerCase().includes('exist')) {
-        Alert.alert('Lỗi', 'Email này đã được đăng ký. Vui lòng sử dụng email khác.');
-      } else if (message.includes('400')) {
-        Alert.alert('Lỗi', 'Thông tin đăng ký không hợp lệ. Vui lòng kiểm tra lại.');
-      } else {
-        Alert.alert('Lỗi', message);
+  // LUỒNG 2: Đăng ký bằng Google -> Nhảy thẳng tới trang cập nhật thông tin
+  // Hàm xử lý đăng ký/đăng nhập nhanh bằng Google
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      // Luôn hiện bảng chọn tài khoản
+      try { await GoogleSignin.signOut(); } catch (e) {}
+      
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) return;
+
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.197:3000/api/v1'}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message);
+
+      // Lưu session
+      await loginSuccess(result.data.access_token, {
+        user_id: String(result.data.user.user_id),
+        email: String(result.data.user.email),
+      });
+
+      setAuthToken(result.data.access_token);
+      
+      // ✅ ĐƯỜNG DẪN ĐÚNG THEO ẢNH CỦA DUY:
+      console.log('✅ Điều hướng tới trang user-info');
+      router.replace('/(auth)/user-info' as any); 
+      
+    } catch (error: any) {
+      if (error.code !== 'SIGN_IN_CANCELLED') {
+        Alert.alert('Lỗi', 'Đăng ký Google thất bại');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Password strength indicator
-  const getPasswordStrength = () => {
-    if (!password) return { level: 0, text: '', color: Colors.neutral.disabled };
-    let strength = 0;
-    if (password.length >= 6) strength++;
-    if (password.length >= 8) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^A-Za-z0-9]/.test(password)) strength++;
-
-    if (strength <= 2) return { level: strength, text: 'Yếu', color: Colors.status.error };
-    if (strength <= 3) return { level: strength, text: 'Trung bình', color: Colors.status.warning };
-    return { level: strength, text: 'Mạnh', color: Colors.status.success };
-  };
-
-  const passwordStrength = getPasswordStrength();
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.neutral.background} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={Colors.neutral.textPrimary} />
           </TouchableOpacity>
 
-          {/* Header */}
           <View style={styles.header}>
             <Logo size="md" />
             <Text style={styles.titleText}>Tạo tài khoản</Text>
-            <Text style={styles.subtitleText}>
-              Đăng ký để bắt đầu theo dõi sức khỏe
-            </Text>
+            <Text style={styles.subtitleText}>Đăng ký để bắt đầu theo dõi sức khỏe</Text>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
-            <Input
-              label="Email hoặc Số điện thoại"
-              placeholder="example@email.com"
-              value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-              leftIcon="mail-outline"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              required
-            />
+            <Input label="Email" placeholder="example@email.com" value={email} onChangeText={setEmail} error={errors.email} />
+            <Input label="Mật khẩu" placeholder="Tối thiểu 6 ký tự" value={password} onChangeText={setPassword} error={errors.password} secureTextEntry />
+            <Input label="Nhập lại mật khẩu" placeholder="Xác nhận mật khẩu" value={confirmPassword} onChangeText={setConfirmPassword} error={errors.confirmPassword} secureTextEntry />
 
-            <Input
-              label="Mật khẩu"
-              placeholder="Tối thiểu 6 ký tự"
-              value={password}
-              onChangeText={setPassword}
-              error={errors.password}
-              leftIcon="lock-closed-outline"
-              secureTextEntry
-              required
-            />
+            <Button title="Đăng ký" onPress={handleRegister} loading={loading} size="lg" />
 
-            {/* Password Strength Indicator */}
-            {password.length > 0 && (
-              <View style={styles.strengthContainer}>
-                <View style={styles.strengthBars}>
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <View
-                      key={level}
-                      style={[
-                        styles.strengthBar,
-                        {
-                          backgroundColor:
-                            level <= passwordStrength.level
-                              ? passwordStrength.color
-                              : Colors.neutral.border,
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-                <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
-                  {passwordStrength.text}
-                </Text>
-              </View>
-            )}
-
-            <Input
-              label="Nhập lại mật khẩu"
-              placeholder="Xác nhận mật khẩu"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              error={errors.confirmPassword}
-              leftIcon="lock-closed-outline"
-              secureTextEntry
-              required
-            />
-
-            {/* Terms */}
-            <Text style={styles.termsText}>
-              Bằng việc đăng ký, bạn đồng ý với{' '}
-              <Text style={styles.linkText}>Điều khoản sử dụng</Text> và{' '}
-              <Text style={styles.linkText}>Chính sách bảo mật</Text> của chúng tôi.
-            </Text>
-
-            <Button
-              title="Đăng ký"
-              onPress={handleRegister}
-              loading={loading}
-              size="lg"
-            />
-
-            {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>hoặc</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social Register */}
             <Button
               title="Tiếp tục với Google"
               variant="outline"
-              onPress={() => { }}
+              onPress={handleGoogleRegister}
               size="lg"
             />
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Đã có tài khoản?{' '}
-              <Link href="/(auth)/login" asChild>
-                <Text style={styles.linkText}>Đăng nhập</Text>
-              </Link>
+              Đã có tài khoản? <Link href="/(auth)/login" asChild><Text style={styles.linkText}>Đăng nhập</Text></Link>
             </Text>
           </View>
         </ScrollView>
