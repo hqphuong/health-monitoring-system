@@ -21,3 +21,10 @@ ai-service/venv/
 ai-service/__pycache__/
 ai-service/*.pyc
 /generated/prisma
+
+.env
+.env.local
+
+!mobile-app/android/app/google-services.json
+!mobile-app/android/app/debug.keystore
+#!.android/

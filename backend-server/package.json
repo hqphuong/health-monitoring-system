@@ -5,6 +5,11 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
+<<<<<<< HEAD
+=======
+    "postinstall": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "start": "node src/server.js",
+>>>>>>> origin/FE
     "test": "vitest --run",
     "dev": "node --env-file=.env src/server.js"
   },
@@ -17,13 +22,20 @@
     "axios": "^1.14.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
+<<<<<<< HEAD
     "dotenv": "^17.4.1",
+=======
+    "dotenv": "^17.3.1",
+>>>>>>> origin/FE
     "express": "^5.2.1",
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.4",
     "pg": "^8.20.0",
+<<<<<<< HEAD
     "socket.io-client": "^4.8.3",
+=======
+>>>>>>> origin/FE
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^5.13.1"
@@ -33,4 +45,8 @@
     "prisma": "^7.6.0",
     "vitest": "^4.1.2"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/FE

@@ -1,0 +1,33 @@
+{
+  "heartRate": {
+    "current": 76,
+    "min": 58,
+    "max": 131,
+    "avg": 74,
+    "resting": 62,
+    "lastMeasured": "2026-03-30T06:35:00Z",
+    "device": "Huawei Band 8",
+    "trend": "stable"
+  },
+  "sleep": {
+    "duration": 450,
+    "quality": 85,
+    "deepSleep": 130,
+    "lightSleep": 240,
+    "remSleep": 80,
+    "awake": 20,
+    "bedTime": "2026-03-29T23:15:00Z",
+    "wakeTime": "2026-03-30T06:45:00Z",
+    "device": "Huawei Band 8"
+  },
+  "steps": {
+    "current": 6420,
+    "goal": 10000,
+    "distance": 4.9,
+    "calories": 265
+  },
+  "water": {
+    "current": 1400,
+    "goal": 2500
+  }
+}
