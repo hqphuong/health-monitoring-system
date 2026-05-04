@@ -93,9 +93,9 @@ if (maxHR > 150) {
                 type: "SOS",
                 trigger_heart_rate: maxHR,
                 alert_time: new Date(),
-                message: primaryContact 
+                /*message: primaryContact 
                     ? `Đã gửi cảnh báo tới người thân: ${primaryContact.contact_name}` 
-                    : "Cảnh báo hệ thống: Không tìm thấy người thân để liên hệ."
+                  : "Cảnh báo hệ thống: Không tìm thấy người thân để liên hệ."*/
             }
         });
     } else {
