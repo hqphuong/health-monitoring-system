@@ -22,7 +22,7 @@ export const setIsAuthenticated = (value: boolean) => {
 };
 
 // Cấu hình Socket (Sử dụng IP LAN máy tính của Duy)
-const SOCKET_URL = 'http://192.168.31.197:3000'; 
+const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL;
 const TEST_USER_ID = '1bfbf31a-81ae-4fb5-9222-78e6576d8d5f';
 
 export default function RootLayout() {

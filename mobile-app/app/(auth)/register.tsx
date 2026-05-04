@@ -18,6 +18,7 @@ import { Button, Input, Logo } from '../../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants/Colors';
 import { api, setAuthToken } from '../../services/api';
 import { loginSuccess } from '../../services/auth';
+import { API_CONFIG, ENDPOINTS } from '@/config/api';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -90,7 +91,7 @@ export default function RegisterScreen() {
 
       if (!idToken) return;
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.197:3000/api/v1'}/auth/google`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.AUTH_GOOGLE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_token: idToken }),

@@ -230,7 +230,6 @@ const sendAlert = async ({ level, metric, ai, trend, user_id, work_id, socket, i
             console.log(`📞 ĐÃ GỬI THÔNG BÁO TỚI NGƯỜI THÂN: ${primaryContact.contact_name}`);
             console.log(`📱 SỐ ĐIỆN THOẠI: ${primaryContact.phone_num}`);
             
-            // Nếu Duy muốn gửi Socket cho cả App của người thân (nếu họ đang online):
             // io.to(`user_${primaryContact.relative_id}`).emit("relative_emergency", { ... });
         } else {
             console.log("⚠️ [SOS WORKER] User chưa thiết lập liên hệ khẩn cấp.");
