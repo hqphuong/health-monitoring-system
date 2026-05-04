@@ -41,3 +41,7 @@ Kiểm tra xem đã bắt chung Wi-Fi chưa.
 Đảm bảo file google-services.json đã có trong thư mục android/app/.
 
 Gỡ app ra cài lại.
+
+5. Tài khoản để test (tài khoản đã có data)
+mail: quocduyps1@gmail.com
+mk: A123456
