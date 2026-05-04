@@ -40,7 +40,6 @@ const RELATIONSHIPS: { value: Relationship; label: string; icon: keyof typeof Io
   { value: 'other', label: 'Khác', icon: 'ellipsis-horizontal' },
 ];
 
-// Map relationship từ API sang FE
 const mapRelationship = (rel: string | null): Relationship => {
   if (!rel) return 'other';
   const lowerRel = rel.toLowerCase();
@@ -68,26 +67,26 @@ export default function EmergencyContactsScreen() {
   const [isPrimary, setIsPrimary] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Fetch relatives từ API
   const fetchContacts = async () => {
     try {
+      setLoading(true);
       setError(null);
       const response = await api.getRelatives();
       
-      // Map dữ liệu từ API sang format FE
-      const mappedContacts: EmergencyContact[] = response.map((r: RelativeResponse, index: number) => ({
-        id: r.phone_num, // Dùng phone làm ID vì API dùng phone làm primary key
-        name: r.contact_name,
-        phone: r.phone_num,
-        relationship: mapRelationship(r.relationship),
-        isPrimary: index === 0, // Contact đầu tiên là primary
-      }));
-      
-      setContacts(mappedContacts);
+      if (response && response.status === "success" && Array.isArray(response.data)) {
+        const mappedContacts: EmergencyContact[] = response.data.map((r: RelativeResponse) => ({
+          id: r.relative_id,
+          name: r.contact_name,
+          phone: r.phone_num,
+          relationship: mapRelationship(r.relationship),
+          isPrimary: r.is_primary, // Đảm bảo lấy đúng từ API
+        }));
+        setContacts(mappedContacts);
+      } else {
+        setContacts([]);
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Lỗi không xác định';
-      setError(message);
-      //console.warn('⚠️ Không thể lấy danh sách liên hệ:', message);
+      setError(err instanceof Error ? err.message : 'Lỗi kết nối');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -141,21 +140,20 @@ export default function EmergencyContactsScreen() {
       const relationshipLabel = RELATIONSHIPS.find(r => r.value === relationship)?.label || 'Khác';
 
       if (editingContact) {
-        // Update existing contact
         await api.updateRelative(editingContact.phone, {
           contact_name: name,
           relationship: relationshipLabel,
+          is_primary: isPrimary, // Gửi trạng thái primary lên server
         });
       } else {
-        // Add new contact
         await api.addRelative({
           phone_num: phone,
           contact_name: name,
           relationship: relationshipLabel,
+          is_primary: isPrimary, // Gửi trạng thái primary khi thêm mới
         });
       }
 
-      // Refresh danh sách
       await fetchContacts();
       setModalVisible(false);
       resetForm();
@@ -190,13 +188,21 @@ export default function EmergencyContactsScreen() {
     );
   };
 
-  const handleSetPrimary = (contact: EmergencyContact) => {
-    setContacts((prev) =>
-      prev.map((c) => ({
-        ...c,
-        isPrimary: c.id === contact.id,
-      }))
-    );
+  const handleSetPrimary = async (contact: EmergencyContact) => {
+    try {
+      await api.updateRelative(contact.phone, { is_primary: true });
+      
+      setContacts((prev) =>
+        prev.map((c) => ({
+          ...c,
+          isPrimary: c.id === contact.id,
+        }))
+      );
+      
+      console.log(`⭐ Đã đặt ${contact.name} làm liên hệ chính.`);
+    } catch (err) {
+      Alert.alert('Lỗi', 'Không thể thay đổi liên hệ chính');
+    }
   };
 
   const getRelationshipLabel = (rel: Relationship) => {
@@ -260,7 +266,6 @@ export default function EmergencyContactsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.neutral.background} />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.neutral.textPrimary} />
@@ -271,7 +276,6 @@ export default function EmergencyContactsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Loading state */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary.main} />
@@ -286,7 +290,6 @@ export default function EmergencyContactsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
-          {/* Error Banner */}
           {error && (
             <View style={styles.errorBanner}>
               <Ionicons name="warning" size={20} color={Colors.status.error} />
@@ -294,63 +297,59 @@ export default function EmergencyContactsScreen() {
             </View>
           )}
 
-          {/* Info Banner */}
           <View style={styles.infoBanner}>
-          <Ionicons name="warning" size={24} color={Colors.status.error} />
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoTitle}>Cảnh báo SOS</Text>
-            <Text style={styles.infoText}>
-              Khi phát hiện bất thường và bạn không phản hồi trong 15 giây, hệ thống sẽ tự động gửi tin nhắn SOS đến các liên hệ dưới đây.
-            </Text>
-          </View>
-        </View>
-
-        {/* Contacts List */}
-        {contacts.length > 0 ? (
-          <>
-            <Text style={styles.sectionTitle}>
-              {contacts.length} liên hệ đã thêm
-            </Text>
-            {contacts.map(renderContact)}
-          </>
-        ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="people-outline" size={48} color={Colors.neutral.placeholder} />
+            <Ionicons name="warning" size={24} color={Colors.status.error} />
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoTitle}>Cảnh báo SOS</Text>
+              <Text style={styles.infoText}>
+                Khi phát hiện bất thường và bạn không phản hồi trong 15 giây, hệ thống sẽ tự động gửi tin nhắn SOS đến các liên hệ dưới đây.
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>Chưa có liên hệ nào</Text>
-            <Text style={styles.emptyText}>
-              Thêm liên hệ khẩn cấp để nhận thông báo SOS khi có sự cố
-            </Text>
-            <Button
-              title="Thêm liên hệ đầu tiên"
-              onPress={openAddModal}
-              style={styles.emptyButton}
-              leftIcon={<Ionicons name="add" size={18} color={Colors.neutral.white} />}
-            />
           </View>
-        )}
 
-        {/* Tips */}
-        <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>Lưu ý quan trọng</Text>
-          <View style={styles.tipItem}>
-            <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
-            <Text style={styles.tipText}>Nên thêm ít nhất 2 liên hệ khẩn cấp</Text>
+          {contacts.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>
+                {contacts.length} liên hệ đã thêm
+              </Text>
+              {contacts.map(renderContact)}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="people-outline" size={48} color={Colors.neutral.placeholder} />
+              </View>
+              <Text style={styles.emptyTitle}>Chưa có liên hệ nào</Text>
+              <Text style={styles.emptyText}>
+                Thêm liên hệ khẩn cấp để nhận thông báo SOS khi có sự cố
+              </Text>
+              <Button
+                title="Thêm liên hệ đầu tiên"
+                onPress={openAddModal}
+                style={styles.emptyButton}
+                leftIcon={<Ionicons name="add" size={18} color={Colors.neutral.white} />}
+              />
+            </View>
+          )}
+
+          <View style={styles.tipsCard}>
+            <Text style={styles.tipsTitle}>Lưu ý quan trọng</Text>
+            <View style={styles.tipItem}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
+              <Text style={styles.tipText}>Nên thêm ít nhất 2 liên hệ khẩn cấp</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
+              <Text style={styles.tipText}>Liên hệ chính sẽ được gọi đầu tiên</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
+              <Text style={styles.tipText}>Thông báo bao gồm vị trí GPS của bạn</Text>
+            </View>
           </View>
-          <View style={styles.tipItem}>
-            <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
-            <Text style={styles.tipText}>Liên hệ chính sẽ được gọi đầu tiên</Text>
-          </View>
-          <View style={styles.tipItem}>
-            <Ionicons name="checkmark-circle" size={16} color={Colors.status.success} />
-            <Text style={styles.tipText}>Thông báo bao gồm vị trí GPS của bạn</Text>
-          </View>
-        </View>
         </ScrollView>
       )}
 
-      {/* Add/Edit Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"

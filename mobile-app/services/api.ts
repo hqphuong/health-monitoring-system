@@ -58,6 +58,21 @@ export interface ProfileResponse {
   updated_at: string;
 }
 
+export interface RelativeResponse {
+  relative_id: string;   
+  phone_num: string;    
+  contact_name: string; 
+  relationship: string;  
+  is_primary: boolean;
+  user_id: string;
+}
+export interface RelativeRequest {
+  contact_name?: string;
+  phone_num?: string;
+  relationship?: string;
+  is_primary?: boolean;
+}
+
 export interface LoginResponse {
   token: string;
   user: {
@@ -114,6 +129,10 @@ export interface Device {
   status?: 'active' | 'inactive';
 }
 
+export interface ApiResponse<T> {
+  status: string;
+  data: T;
+}
 // ===========================================
 // TOKEN MANAGEMENT
 // ===========================================
@@ -278,12 +297,18 @@ export const api = {
       method: 'DELETE',
     }),
 
-  getRelatives: (): Promise<any> => 
-    fetchAPI<any>(ENDPOINTS.RELATIVES), // Gọi tới '/relatives'
+  getRelatives: (): Promise<ApiResponse<RelativeResponse[]>> => 
+    fetchAPI<ApiResponse<RelativeResponse[]>>(ENDPOINTS.RELATIVES),
 
-  addRelative: (payload: { name: string; phone: string; relationship: string }): Promise<any> =>
-    fetchAPI<any>(ENDPOINTS.RELATIVES, {
+  addRelative: (payload: RelativeRequest): Promise<RelativeResponse> =>
+    fetchAPI<RelativeResponse>(ENDPOINTS.RELATIVES, {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updateRelative: (relativeId: string, payload: RelativeRequest): Promise<RelativeResponse> =>
+    fetchAPI<RelativeResponse>(`${ENDPOINTS.RELATIVES}/${relativeId}`, {
+      method: 'PATCH', 
       body: JSON.stringify(payload),
     }),
 

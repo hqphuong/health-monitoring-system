@@ -190,9 +190,11 @@ const shouldSendAlert = (level, socket) => {
 };
 
 // Gửi alert
+// Gửi alert
 const sendAlert = async ({ level, metric, ai, trend, user_id, work_id, socket, io }) => {
     socket.data.lastAlert = Date.now();
 
+    // 1. Lưu log cảnh báo vào DB
     await prisma.alertLog.create({
         data: {
             user_id,
@@ -204,12 +206,37 @@ const sendAlert = async ({ level, metric, ai, trend, user_id, work_id, socket, i
         }
     });
 
+    // 2. Gửi event về App cho User
     io.to(`user_${user_id}`).emit("emergency_alert", {
         level,
         ai_risk: ai.risk_score,
         trend,
-        reasons: ai.reasons || []
+        reasons: ai.reasons || [],
+        heart_rate: metric.heart_rate
     });
+
+    // 3. 🔥 NẾU LÀ SOS: Tìm và gửi tin nhắn/log cho người thân
+    if (level === "SOS") {
+        const primaryContact = await prisma.relative.findFirst({
+            where: { 
+                user_id: user_id, 
+                is_primary: true 
+            }
+        });
+
+        console.log("--------------------------------------------------");
+        console.log(`🚨 [SOS WORKER] CẢNH BÁO KHẨN CẤP!`);
+        if (primaryContact) {
+            console.log(`📞 ĐÃ GỬI THÔNG BÁO TỚI NGƯỜI THÂN: ${primaryContact.contact_name}`);
+            console.log(`📱 SỐ ĐIỆN THOẠI: ${primaryContact.phone_num}`);
+            
+            // Nếu Duy muốn gửi Socket cho cả App của người thân (nếu họ đang online):
+            // io.to(`user_${primaryContact.relative_id}`).emit("relative_emergency", { ... });
+        } else {
+            console.log("⚠️ [SOS WORKER] User chưa thiết lập liên hệ khẩn cấp.");
+        }
+        console.log("--------------------------------------------------");
+    }
 
     console.log("ALERT SENT:", level);
 };

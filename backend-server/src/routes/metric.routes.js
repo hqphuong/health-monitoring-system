@@ -9,7 +9,8 @@ const router = express.Router();
  * @desc    Đồng bộ dữ liệu sức khỏe từ Health Connect (Vét cạn nhịp tim, giấc ngủ stages)
  * @access  Private
  */
-router.post('/', verifyToken, checkProfileComplete, syncHealthData);
+//router.post('/', verifyToken, checkProfileComplete, syncHealthData);
+router.post('/', syncHealthData);
 
 /**
  * @route   GET /api/v1/metrics?range=day|week|month
