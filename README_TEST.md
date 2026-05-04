@@ -15,10 +15,12 @@ Mở file: api.ts (mobile-app\config)
 Sửa dòng BASE_URL thành IP hiện tại của mình:
 
 TypeScript
-export const API_CONFIG = {
-  BASE_URL: 'http://192.168.31.197:3000/api/v1', // gõ ipcofig trong terminal để lấy ip
-  TIMEOUT: 60000,
-};
+const SERVER_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.197:3000';
+
+hoặc tạo file .env ở folder mobile  
+# mobile-app/.env
+EXPO_PUBLIC_API_URL=http://192.168.31.197:3000
+
 Lưu ý: Điện thoại/Máy ảo của anh em và máy tính của mình phải bắt chung một mạng Wi-Fi.
 
 3. Cài đặt và Khởi chạy
