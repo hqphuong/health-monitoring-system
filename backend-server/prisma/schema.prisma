@@ -105,3 +105,22 @@ model AlertLog {
 
   @@map("alert_log")
 }
+
+model AIPredictionLog {
+  prediction_id      String   @id @default(uuid())
+  user_id            String
+  work_id            String?
+  
+  risk_score         Float
+  confidence         Float
+
+  prediction         String
+
+  reasons            Json?
+
+  current_heart_rate Int?
+  steps              Int?
+  stress_level       Int?
+
+  created_at         DateTime @default(now())
+}
