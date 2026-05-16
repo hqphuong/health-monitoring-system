@@ -3,30 +3,15 @@ import { initialize, requestPermission, readRecords } from 'react-native-health-
 import api from '../services/api'; // Duy kiểm tra lại đường dẫn import này cho đúng cấu trúc folder dự án nhé
 
 export function useWeeklySync() {
-    const [logs, setLogs] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
-
-    const addLog = (message: string, data?: any) => {
-        const time = new Date().toLocaleTimeString();
-        const logLine = `[${time}] ${message}`;
-        console.log(logLine, data ? JSON.stringify(data, null, 2) : '');
-
-        setLogs(prev => [
-            ...prev,
-            logLine + (data ? `\n${JSON.stringify(data, null, 2).substring(0, 200)}...` : '')
-        ]);
-    };
 
     const runWeeklySync = async () => {
         setLoading(true);
-        setLogs([]);
-        addLog("=== 🚀 BẮT ĐẦU TIẾN TRÌNH ĐỒNG BỘ DỮ LIỆU CHUẨN 1 TUẦN QUA ===");
 
         try {
             // -------------------------------------------------------------
             // BƯỚC 1: KHỞI TẠO SDK & ĐỊNH NGHĨA MẢNG QUYỀN CHUẨN ĐỂ TRÁNH LỖI BIÊN DỊCH ARGUMENTS
             // -------------------------------------------------------------
-            addLog("⏳ [BƯỚC 1] Kết nối hệ thống Android Health Connect...");
             await initialize();
 
             const PERMISSIONS_LIST = [
@@ -38,11 +23,9 @@ export function useWeeklySync() {
                 { accessType: 'read', recordType: 'Distance' },
             ] as any[];
 
-            addLog("⏳ Gửi yêu cầu cấp quyền đọc cho 6 phân hệ chỉ số sức khỏe...");
             await requestPermission(PERMISSIONS_LIST);
-            addLog("✅ Khởi tạo và cấp quyền thành công!");
 
-            // Thiết lập khoảng thời gian lùi đúng 7 ngày tính từ thời điểm hiện tại
+            // Thiết lập khoảng thời gian lùi đúng 30 ngày tính từ thời điểm hiện tại
             const now = new Date();
             const startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const endTime = now.toISOString();
@@ -51,12 +34,9 @@ export function useWeeklySync() {
                 pageSize: 10000
             };
 
-            addLog(`⏱️ Khoảng thời gian quét dữ liệu (1 Tuần - UTC): ${startTime} ==> ${endTime}`);
-
             // -------------------------------------------------------------
             // BƯỚC 2: ĐỌC DỮ LIỆU THÔ TỪ SDK (PHÁT HIỆN SỐ LƯỢNG ĐẦU VÀO)
             // -------------------------------------------------------------
-            addLog("⏳ [BƯỚC 2] Đang tải song song dữ liệu thô từ các phân hệ đối tượng...");
             const [oxygenRaw, sleepRaw, heartRaw, stepsRaw, caloriesRaw, distanceRaw] = await Promise.all([
                 readRecords('OxygenSaturation', filter as any),
                 readRecords('SleepSession', filter as any),
@@ -66,17 +46,9 @@ export function useWeeklySync() {
                 readRecords('Distance', filter as any),
             ]);
 
-            addLog(`📊 THỐNG KÊ BẢN GHI THÔ TỪ HEALTH CONNECT (7 NGÀY):`);
-            addLog(`- Nhịp tim (HeartRate Series): ${heartRaw.records?.length || 0} gói dữ liệu lớn`);
-            addLog(`- SpO2 (OxygenSaturation): ${oxygenRaw.records?.length || 0} điểm đo`);
-            addLog(`- Bước chân (Steps): ${stepsRaw.records?.length || 0} mốc vận động`);
-            addLog(`- Giấc ngủ (SleepSession): ${sleepRaw.records?.length || 0} giấc ngủ`);
-            addLog(`- Năng lượng tiêu hao (Calories): ${caloriesRaw.records?.length || 0} mốc tiêu thụ`);
-
             // -------------------------------------------------------------
             // BƯỚC 3: MÁY NGHIỀN DATA THEO PHÚT (BÓC TÁCH MẢNG SAMPLES CON)
             // -------------------------------------------------------------
-            addLog("⏳ [BƯỚC 3] Tiến hành nghiền nhỏ và tích hợp đa chỉ số về mốc thời gian phút...");
             const groupedMap: Record<string, any> = {};
 
             const addToMap = (time: string, fields: any) => {
@@ -188,64 +160,32 @@ export function useWeeklySync() {
                 })
                 .map(({ hr_samples, ...rest }) => rest);
 
-            addLog(`📦 ĐÓNG GÓI HOÀN TẤT: Tạo ra mảng tích hợp gồm ${finalPayload.length} phần tử từng phút.`);
-
-            const payloadCoverage = {
-                'Nhịp tim lọt lưới': finalPayload.some(p => p.heart_rate !== null),
-                'SpO2 lọt lưới': finalPayload.some(p => p.blood_oxygen !== null),
-                'Bước chân lọt lưới': finalPayload.some(p => p.steps > 0),
-                'Calories lọt lưới': finalPayload.some(p => p.calories > 0),
-                'Giấc ngủ lọt lưới': finalPayload.some(p => p.sleep_duration > 0),
-            };
-            addLog("🔍 ĐỘ PHỦ ĐỐI TƯỢNG DATA TRONG PAYLOAD CHUẨN BỊ GỬI:", payloadCoverage);
-
             if (finalPayload.length === 0) {
-                throw new Error("Không có dữ liệu biến động hợp lệ nào trong 7 ngày qua để thực hiện sync!");
+                throw new Error("Không có dữ liệu biến động hợp lệ nào trong 30 ngày qua để thực hiện sync!");
             }
 
             // -------------------------------------------------------------
             // BƯỚC 4: BẮN PAYLOAD MẢNG CHUẨN LÊN SERVER (POST /METRICS)
             // -------------------------------------------------------------
-            addLog("⏳ [BƯỚC 4] Đang thực hiện POST API đẩy payload 1 tuần lên Server...");
-            const syncResult = await api.syncMetrics({ data: finalPayload });
-            addLog("✅ SERVER PHẢN HỒI GHI NHẬN THÀNH CÔNG:", syncResult);
+            await api.syncMetrics({ data: finalPayload });
 
-            addLog("⏳ Tạm nghỉ 2 giây chờ hệ thống phía Backend xử lý hoàn tất Batch...");
+            // Tạm nghỉ 2 giây chờ hệ thống phía Backend xử lý hoàn tất Batch
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // -------------------------------------------------------------
             // BƯỚC 5: ĐỌC NGƯỢC KIỂM TRA CHỈ SỐ THỰC TẾ ĐÃ LƯU TRÊN DB SERVER
             // -------------------------------------------------------------
-            addLog("⏳ [BƯỚC 5] Đang gọi GET API truy vấn đối chứng dữ liệu trên Server...");
-            const serverData = await api.getMetrics({ range: 'month' });
-            const serverRaw = serverData?.raw_data || [];
-            const serverSummary = serverData?.daily_summary || [];
-
-            addLog(`📊 KẾT QUẢ NGHIỆM THU CUỐI CÙNG TỪ DATABASE SERVER:`);
-            addLog(`- Số lượng ngày sinh ra tóm tắt (daily_summary): ${serverSummary.length} ngày`);
-            addLog(`- Tổng số hàng chỉ số sinh lý (raw_data) trong DB: ${serverRaw.length}`);
-            addLog(`- Số hàng chứa Nhịp tim thực tế (>0): ${serverRaw.filter((r: any) => r.heart_rate > 0).length}`);
-            addLog(`- Số hàng chứa SpO2 thực tế (>0): ${serverRaw.filter((r: any) => r.blood_oxygen > 0).length}`);
-            addLog(`- Số hàng chứa Bước chân thực tế (>0): ${serverRaw.filter((r: any) => r.steps > 0).length}`);
-
-            if (serverRaw.length > 0) {
-                addLog("🎉 XÁC NHẬN LUỒNG HOÀN TOÀN THÔNG SUỐT! Mẫu 1 bản ghi đa chỉ số chuẩn từ DB Server:", serverRaw[serverRaw.length - 1]);
-            } else {
-                addLog("❌ CẢNH BÁO: Không kéo được bản ghi đối chứng nào từ Server xuống.");
-            }
+            await api.getMetrics({ range: 'month' });
 
         } catch (err: any) {
-            addLog(`🚨 TIẾN TRÌNH ĐỨT GÃY TẠI LỖI: ${err.message}`);
+            console.error("🚨 [useWeeklySync Sync Error]:", err.message);
         } finally {
             setLoading(false);
-            addLog("=== 🏁 KẾT THÚC QUY TRÌNH ĐỒNG BỘ 1 TUẦN ===");
         }
     };
 
     return {
         runWeeklySync,
-        loading,
-        logs
+        loading
     };
 }
-

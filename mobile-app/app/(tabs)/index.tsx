@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const rawData = useMemo(() => serverResponse?.raw_data || [], [serverResponse]);
   const dailySummary = useMemo(() => serverResponse?.daily_summary || [], [serverResponse]);
 
-  // --- LUỒNG XỬ LÝ ĐỒNG BỘ VÀ LÀM MỚI DỮ LIỆU ---
+  // --- LUỒNG XỬ LÝ ĐỒNG BỘ VÀ LÀM MỚI DỮ LIỆU (KHI VUỐT HOẶC ẤN NÚT ĐỒNG BỘ) ---
   const onRefresh = useCallback(async () => {
     try {
       // Kích hoạt đọc Health Connect và POST dữ liệu thô lên DB Render
@@ -131,10 +131,10 @@ export default function HomeScreen() {
     };
   }, [rawData, dailySummary, timeRange]);
 
-  // Gọi phát đầu tiên khi mở app
+  // SỬA TẠI ĐÂY: Khởi chạy phát đầu tiên khi mở app - Chỉ lấy tên và kéo data UI có sẵn, không tự động sync nữa
   useEffect(() => {
     getUserData().then((u: any) => setUserName(u?.full_name || 'Duy'));
-    onRefresh();
+    refresh(); // Chỉ gọi refresh để lấy data sẵn có từ Server Render lên UI
   }, []);
 
   return (
@@ -144,7 +144,7 @@ export default function HomeScreen() {
         timeRange={timeRange}
         setTimeRange={setTimeRange}
         isSyncing={isSyncing} // Hiển thị vòng xoay xoay trên Header dựa vào loading của hook gốc
-        onRefresh={onRefresh}
+        onRefresh={onRefresh} // Hàm này kích hoạt đồng bộ khi bấm nút trên Header
       />
       <ScrollView
         style={styles.content}
@@ -153,7 +153,7 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isDataLoading}
-            onRefresh={refresh}
+            onRefresh={onRefresh} // SỬA TẠI ĐÂY: Vuốt từ trên xuống sẽ kích hoạt luồng đồng bộ hoàn chỉnh
             colors={[Colors.primary.main]}
           />
         }
@@ -190,6 +190,7 @@ export default function HomeScreen() {
           stages={processedData.sleep.stages}
           timeRange={timeRange}
           dailySummary={dailySummary}
+          rawData={rawData}
         />
 
         <View style={styles.smallCardsRow}>
