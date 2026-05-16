@@ -115,7 +115,7 @@ export default function HomeScreen() {
   }, [rawData, dailySummary, timeRange]);
 
   const onRefresh = useCallback(async () => {
-    // 1. Đẩy data từ Health Connect lên Server
+    // 1. Đẩy data từ Health Connect lên Server (Thay đổi cấu hình quét lùi 30 ngày)
     await syncHealthData(30);
     // 2. Đợi server xử lý xong thì kéo data mới về UI
     setTimeout(() => refresh(), 1000);
@@ -180,7 +180,6 @@ export default function HomeScreen() {
           <CaloriesSection calories={processedData.calories} timeRange={timeRange} />
         </View>
 
-        {/* SỬA LỖI TẠI ĐÂY: content thay vì tipContent */}
         <HealthTipCard
           content={randomTip?.content || "Duy trì lối sống lành mạnh cùng HealthGuard nhé!"}
         />
