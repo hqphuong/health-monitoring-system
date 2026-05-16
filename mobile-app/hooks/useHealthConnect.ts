@@ -21,7 +21,7 @@ export function useHealthConnect() {
         { accessType: 'read', recordType: 'HeartRate' },
         { accessType: 'read', recordType: 'OxygenSaturation' },
         { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-        { accessType: 'read', recordType: 'BasalMetabolicRate' }, // Thêm quyền đọc Calo cơ bản
+        { accessType: 'read', recordType: 'BasalMetabolicRate' },
         { accessType: 'read', recordType: 'Distance' },
         { accessType: 'read', recordType: 'SleepSession' },
       ]);
@@ -39,12 +39,12 @@ export function useHealthConnect() {
         readRecords('ActiveCaloriesBurned', filter as any),
         readRecords('Distance', filter as any),
         readRecords('SleepSession', filter as any),
-        readRecords('BasalMetabolicRate', filter as any), // Lấy dữ liệu BMR
+        readRecords('BasalMetabolicRate', filter as any),
       ]);
 
       const groupedMap: Record<string, any> = {};
 
-      // 3. Hàm gộp dữ liệu thông minh (Giữ nguyên logic của Duy)
+      // 3. Hàm gộp dữ liệu thông minh
       const addToMap = (time: string, fields: any) => {
         if (!time) return;
         const date = new Date(time);
@@ -74,9 +74,15 @@ export function useHealthConnect() {
           entry.heart_rate = Math.round(sum / entry.hr_samples.length);
         }
 
-        // Gộp SpO2
+        // FIX SPO2: Chuẩn hóa 0.98 -> 98 ngay tại Mobile
         if (fields.blood_oxygen != null) {
-          entry.blood_oxygen = fields.blood_oxygen;
+          let oxyVal = Number(fields.blood_oxygen);
+          if (oxyVal > 0 && oxyVal <= 1) {
+            oxyVal = Math.round(oxyVal * 100);
+          }
+          if (oxyVal > 0) {
+            entry.blood_oxygen = oxyVal;
+          }
         }
 
         // Cộng dồn các chỉ số vận động
@@ -90,7 +96,7 @@ export function useHealthConnect() {
         }
       };
 
-      // 4. XỬ LÝ NHỊP TIM (Giữ nguyên)
+      // 4. XỬ LÝ NHỊP TIM
       heart.records.forEach((record: any) => {
         if (record.samples && record.samples.length > 0) {
           record.samples.forEach((sample: any) => {
@@ -101,72 +107,53 @@ export function useHealthConnect() {
         }
       });
 
-      // 5. XỬ LÝ GIẤC NGỦ (Giữ nguyên)
+      // 5. XỬ LÝ GIẤC NGỦ
       sleepSessions.records.forEach((session: any) => {
         if (session.metadata?.dataOrigin !== PRIORITY_SOURCE && sleepSessions.records.some(r => r.metadata?.dataOrigin === PRIORITY_SOURCE)) return;
 
         if (session.stages && session.stages.length > 0) {
           session.stages.forEach((stage: any) => {
-            const s = new Date(stage.startTime).getTime();
-            const e = new Date(stage.endTime).getTime();
-            const durationInMinutes = Math.round((e - s) / 60000);
+            const durationInMinutes = Math.round((new Date(stage.endTime).getTime() - new Date(stage.startTime).getTime()) / 60000);
             addToMap(stage.startTime, { 
               sleep_duration: durationInMinutes,
               raw_data: { sleep_stages: stage.stage } 
             });
           });
         } else {
-          const s = new Date(session.startTime).getTime();
-          const e = new Date(session.endTime).getTime();
-          addToMap(session.startTime, { sleep_duration: Math.round((e - s) / 60000) });
+          const durationInMinutes = Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 60000);
+          addToMap(session.startTime, { sleep_duration: durationInMinutes });
         }
       });
 
-      // 6. XỬ LÝ CÁC CHỈ SỐ VẬN ĐỘNG (Lọc ưu tiên Huawei/Health Sync)
+      // Helper: Lọc dữ liệu ưu tiên (tránh mất data nếu ko có nguồn PRIORITY_SOURCE)
+      const getValidRecords = (records: any[]) => {
+        const hasPriority = records.some((r: any) => r.metadata?.dataOrigin === PRIORITY_SOURCE);
+        return hasPriority ? records.filter((r: any) => r.metadata?.dataOrigin === PRIORITY_SOURCE) : records;
+      };
+
+      // 6. XỬ LÝ CÁC CHỈ SỐ VẬN ĐỘNG
+      getValidRecords(steps.records).forEach((r: any) => {
+        addToMap(r.startTime || r.time, { steps: r.count });
+      });
       
-      // Xử lý Steps
-      steps.records.forEach((r: any) => {
-        if (r.metadata?.dataOrigin === PRIORITY_SOURCE) {
-          addToMap(r.startTime, { steps: r.count });
-        }
-      });
-      
-      // Xử lý Calories: Gộp Active + Basal để khớp con số Huawei
-      // Bước A: Cộng Active Calories (32 kcal Duy đang thấy)
-      calories.records.forEach((r: any) => {
-        if (r.metadata?.dataOrigin === PRIORITY_SOURCE) {
-          const kcal = r.energy.inKilocalories;
-          if (kcal > 0 && kcal < 200) { 
-            addToMap(r.startTime, { calories: kcal });
-          }
-        }
+      getValidRecords(calories.records).forEach((r: any) => {
+        addToMap(r.startTime || r.time, { calories: r.energy?.inKilocalories || r.energy || 0 });
       });
 
-      // Bước B: Cộng Basal Calories (Phần 90 kcal còn thiếu)
-      // BMR trong Health Connect thường ghi theo mốc thời gian (time)
-      basal.records.forEach((r: any) => {
-        if (r.metadata?.dataOrigin === PRIORITY_SOURCE) {
-          // BMR trả về kcal/ngày. Ta quy đổi ra kcal/phút tại thời điểm đó.
-          const kcalPerMinute = r.basalMetabolicRate.inKilocaloriesPerDay / 1440;
-          addToMap(r.time, { calories: kcalPerMinute });
-        }
-      });
-
-      // Xử lý Distance
-      distance.records.forEach((r: any) => {
-        if (r.metadata?.dataOrigin === PRIORITY_SOURCE) {
-          addToMap(r.startTime, { distance: r.distance.inMeters });
-        }
+      getValidRecords(distance.records).forEach((r: any) => {
+        addToMap(r.startTime || r.time, { distance: r.distance?.inMeters || r.distance || 0 });
       });
 
       // Xử lý SpO2
       oxygen.records.forEach((r: any) => {
-        if (r.percentage != null) {
-            addToMap(r.time, { blood_oxygen: r.percentage });
+        const time = r.time || r.startTime;
+        const oxyVal = r.percentage ?? r.level ?? null;
+        if (oxyVal != null && time) {
+            addToMap(time, { blood_oxygen: oxyVal });
         }
       });
 
-      // 7. Tạo Payload cuối cùng (Giữ nguyên)
+      // 7. Tạo Payload cuối cùng
       const finalPayload = Object.values(groupedMap)
         .filter((item: any) => {
           return item.steps > 0 || 
@@ -177,8 +164,9 @@ export function useHealthConnect() {
         })
         .map(({ hr_samples, ...rest }) => rest);
 
-      // 8. Đẩy lên Server (Giữ nguyên)
+      // 8. Đẩy lên Server
       if (finalPayload.length > 0) {
+        console.log(`📤 [Sync] Đang đẩy ${finalPayload.length} bản ghi lên Server...`);
         await api.syncMetrics({ data: finalPayload });
         return true;
       }
