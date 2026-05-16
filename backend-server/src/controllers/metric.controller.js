@@ -98,13 +98,10 @@ export const getHealthMetrics = async (req, res) => {
         const groups = metrics.reduce((acc, curr) => {
             const date = getLocalDate(curr.record_time);
 
-            // Xử lý riêng ngày cho giấc ngủ: shift thêm 12 tiếng vào mốc thời gian UTC thực tế 
-            // trước khi parse sang múi giờ Việt Nam để gộp trọn vẹn giấc ngủ từ trưa hôm trước đến trưa hôm nay.
             const sleepDateObj = new Date(curr.record_time);
             sleepDateObj.setHours(sleepDateObj.getHours() + 12);
             const sleepDate = getLocalDate(sleepDateObj);
 
-            // Dùng mốc thời gian dạng timestamp làm khóa để ngăn chặn việc cộng dồn lặp dữ liệu do cơ chế sync nhiều lần
             const timeKey = new Date(curr.record_time).getTime();
 
             if (!acc[date]) {
@@ -149,7 +146,6 @@ export const getHealthMetrics = async (req, res) => {
 
             return acc;
         }, {});
-
         const dailySummary = Object.keys(groups).map(date => {
             const day = groups[date];
 

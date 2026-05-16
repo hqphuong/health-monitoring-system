@@ -47,7 +47,10 @@ export default function WeeklySyncScreen() {
       const now = new Date();
       const startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const endTime = now.toISOString();
-      const filter = { timeRangeFilter: { operator: 'between', startTime, endTime } };
+      const filter = {
+        timeRangeFilter: { operator: 'between', startTime, endTime },
+        pageSize: 5000
+      };
 
       addLog(`⏱️ Khoảng thời gian quét dữ liệu (1 Tuần - UTC): ${startTime} ==> ${endTime}`);
 

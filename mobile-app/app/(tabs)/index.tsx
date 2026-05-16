@@ -16,7 +16,7 @@ import CaloriesSection from '../../components/home/CaloriesSection';
 import { useHealthData } from '../../hooks/useHealthData';
 import { getUserData } from '../../services/auth';
 import { useHealthTips } from '../../hooks/useHealthTips';
-import { useHealthConnect } from '../../hooks/useHealthConnect';
+import { useWeeklySync } from '../../hooks/useWeeklySync'; // Import Hook nguyên bản vừa bóc tách
 
 type TimeRange = 'day' | 'week' | 'month';
 
@@ -24,13 +24,32 @@ export default function HomeScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [userName, setUserName] = useState<string>('');
 
-  const { syncHealthData, loading: isSyncing } = useHealthConnect() as any;
+  // 1. Gọi Hook đồng bộ nguyên bản 100% logic của Duy
+  const { runWeeklySync, loading: isSyncing } = useWeeklySync();
+
+  // 2. Lấy dữ liệu phân tích từ Server về để vẽ biểu đồ và cập nhật UI
   const { data: serverResponse, loading: isDataLoading, refresh } = useHealthData(timeRange) as any;
   const { randomTip } = useHealthTips();
 
   const rawData = useMemo(() => serverResponse?.raw_data || [], [serverResponse]);
   const dailySummary = useMemo(() => serverResponse?.daily_summary || [], [serverResponse]);
 
+  // --- LUỒNG XỬ LÝ ĐỒNG BỘ VÀ LÀM MỚI DỮ LIỆU ---
+  const onRefresh = useCallback(async () => {
+    try {
+      // Kích hoạt đọc Health Connect và POST dữ liệu thô lên DB Render
+      await runWeeklySync();
+    } catch (error) {
+      console.error("❌ [HomeScreen Sync Error]:", error);
+    } finally {
+      // Trễ đúng 2.5 giây như luồng test để DB hoàn tất Batch-Upsert rồi kéo ngược data sạch về UI
+      setTimeout(() => {
+        refresh();
+      }, 2500);
+    }
+  }, [runWeeklySync, refresh]);
+
+  // --- XỬ LÝ TÍNH TOÁN HIỂN THỊ CÁC THÀNH PHẦN (GIỮ NGUYÊN GỐC KHÔNG ĐỔI) ---
   const processedData = useMemo(() => {
     const defaultData = {
       score: 0,
@@ -43,14 +62,13 @@ export default function HomeScreen() {
 
     if (!rawData.length && !dailySummary.length) return defaultData;
 
-    // --- XỬ LÝ TAB NGÀY ---
     if (timeRange === 'day') {
       const availableDates = Array.from(new Set(rawData.map((r: any) => new Date(r.record_time).toDateString()))).reverse();
-      let targetDateStr: string = new Date().toDateString();
+      let targetDateStr: string = availableDates.length > 0 ? (availableDates[0] as string) : new Date().toDateString();
 
       for (const dStr of availableDates) {
         const hasMainData = rawData.some((r: any) =>
-          new Date(r.record_time).toDateString() === (dStr as string) && (r.heart_rate > 0 || r.steps > 0)
+          new Date(r.record_time).toDateString() === (dStr as string) && (r.heart_rate > 0 || r.steps > 0 || r.blood_oxygen > 0)
         );
         if (hasMainData) { targetDateStr = dStr as string; break; }
       }
@@ -90,7 +108,6 @@ export default function HomeScreen() {
       };
     }
 
-    // --- TAB TUẦN / THÁNG ---
     const totalSteps = dailySummary.reduce((s: number, d: any) => s + (d.steps || 0), 0);
     const totalCals = dailySummary.reduce((s: number, d: any) => s + (d.calories || 0), 0);
     const hrHistory = dailySummary.map((d: any) => d.avg_hr).filter((v: any) => v > 0);
@@ -107,20 +124,14 @@ export default function HomeScreen() {
       oxygen: oxyHistory.length ? Math.round(oxyHistory.reduce((a: any, b: any) => a + b, 0) / oxyHistory.length) : 0,
       sleep: {
         duration: totalSleepHrs.toFixed(1),
-        stages: [] // Week/Month thường hiển thị theo dailySummary trong SleepSection
+        stages: []
       },
       steps: Math.round(totalSteps),
       calories: Math.round(totalCals)
     };
   }, [rawData, dailySummary, timeRange]);
 
-  const onRefresh = useCallback(async () => {
-    // 1. Đẩy data từ Health Connect lên Server (Thay đổi cấu hình quét lùi 30 ngày)
-    await syncHealthData(30);
-    // 2. Đợi server xử lý xong thì kéo data mới về UI
-    setTimeout(() => refresh(), 1000);
-  }, [syncHealthData, refresh]);
-
+  // Gọi phát đầu tiên khi mở app
   useEffect(() => {
     getUserData().then((u: any) => setUserName(u?.full_name || 'Duy'));
     onRefresh();
@@ -132,14 +143,20 @@ export default function HomeScreen() {
         userName={userName}
         timeRange={timeRange}
         setTimeRange={setTimeRange}
-        isSyncing={isSyncing}
+        isSyncing={isSyncing} // Hiển thị vòng xoay xoay trên Header dựa vào loading của hook gốc
         onRefresh={onRefresh}
       />
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isDataLoading} onRefresh={refresh} colors={[Colors.primary.main]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isDataLoading}
+            onRefresh={refresh}
+            colors={[Colors.primary.main]}
+          />
+        }
       >
         <HealthScoreCard score={Math.round(processedData?.score ?? 0)} />
 
