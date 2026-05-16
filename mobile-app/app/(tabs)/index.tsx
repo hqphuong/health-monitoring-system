@@ -193,10 +193,20 @@ export default function HomeScreen() {
           rawData={rawData}
         />
 
-        <View style={styles.smallCardsRow}>
-          <StepsSection steps={processedData.steps} />
-          <CaloriesSection calories={processedData.calories} timeRange={timeRange} />
-        </View>
+        <StepsSection
+          steps={processedData.steps}
+          goal={10000}
+          timeRange={timeRange}
+          dailySummary={dailySummary}
+          rawData={rawData} // 🟢 TRUYỀN THÊM DÒNG NÀY ĐỂ BƠM DATA CHO MÁY NGHIỀN MINI
+        />
+
+        <CaloriesSection
+          calories={processedData.calories}
+          timeRange={timeRange}
+          dailySummary={dailySummary} // 🟢 Chỉ cần bổ sung dòng này là xong
+        />
+
 
         <HealthTipCard
           content={randomTip?.content || "Duy trì lối sống lành mạnh cùng HealthGuard nhé!"}
