@@ -92,6 +92,7 @@ export const evaluateHealthData = (metric, userAge = 25, isResting = true) => {
     if (isSOS) {
         return { 
             level: "SOS", 
+            reasons: warningMessages,
             message: `KÍCH HOẠT CẤP CỨU: ${warningMessages.join(" - ")}. Hệ thống đang gọi người thân!` 
         };
     }
@@ -99,12 +100,14 @@ export const evaluateHealthData = (metric, userAge = 25, isResting = true) => {
     if (isWarning) {
         return { 
             level: "WARNING", 
+            reasons: warningMessages,
             message: `Cảnh báo: ${warningMessages.join(" - ")}. Vui lòng điều chỉnh cường độ hoạt động.` 
         };
     }
 
     return { 
         level: "NORMAL", 
+        reasons: [],
         message: "Các chỉ số cơ thể đang ở trạng thái an toàn." 
     };
 };

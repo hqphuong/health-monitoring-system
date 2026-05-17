@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 
 const socket = io("http://localhost:3000");
 
-console.log("🚀 Starting test...");
+console.log("Starting test...");
 
 let started = false;
 
@@ -10,7 +10,7 @@ let started = false;
 // CONNECT
 // =========================
 socket.on("connect", () => {
-    console.log("✅ Connected:", socket.id);
+    console.log("Connected:", socket.id);
 
     // start session trước
     socket.emit("start_session", { user_id: "test-user-1" });
@@ -20,7 +20,7 @@ socket.on("connect", () => {
 // SESSION CREATED
 // =========================
 socket.on("session_created", (data) => {
-    console.log("🟢 SESSION:", data);
+    console.log("SESSION:", data);
 
     if (started) return;
     started = true;
@@ -46,7 +46,7 @@ socket.on("session_created", (data) => {
             ]
         };
 
-        console.log("📤 SEND:", payload);
+        console.log("SEND:", payload);
 
         socket.emit("stream_metric", payload);
 
@@ -57,16 +57,16 @@ socket.on("session_created", (data) => {
 // RESPONSE
 // =========================
 socket.on("metric_update", (data) => {
-    console.log("📊 UPDATE:", data);
+    console.log("UPDATE:", data);
 });
 
 socket.on("emergency_alert", (data) => {
-    console.log("🚨 ALERT:", data);
+    console.log("ALERT:", data);
 });
 
 // =========================
 // ERROR
 // =========================
 socket.on("error", (err) => {
-    console.log("❌ ERROR:", err);
+    console.log("ERROR:", err);
 });

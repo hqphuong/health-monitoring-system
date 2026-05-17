@@ -17,10 +17,10 @@ const fallbackQueue = [];
 const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
 // ================= AI RETRY =================
-const callAIWithRetry = async (hrSeq, retries = 3) => {
+const callAIWithRetry = async (hrSeq, metric, retries = 3) => {
     for (let i = 0; i < retries; i++) {
         try {
-            const result = await getRiskScore(hrSeq);
+            const result = await getRiskScore(hrSeq, metric);
             aiFailCount = 0;
             return result;
         } catch (err) {
@@ -132,12 +132,12 @@ const getHeartRateSequence = async (user_id) => {
 };
 
 // Gọi AI (có circuit breaker)
-const getAIAssessment = async (hrSeq) => {
+const getAIAssessment = async (hrSeq, metric) => {
     let ai = { risk_score: 0, reasons: [] };
 
     if (!isAIDisabled() && hrSeq.length >= 3) {
         try {
-            ai = await callAIWithRetry(hrSeq);
+            ai = await callAIWithRetry(hrSeq, metric);
         } catch (err) {
             console.error("AI call failed:", err.message);
             handleAIFailure();
@@ -246,14 +246,14 @@ export const processMetricJob = async (metric, socket, io) => {
     const work_id = socket.data.work_id;
 
     try {
-        console.log("📥 PROCESS METRIC:", metric);
+        console.log("PROCESS METRIC:", metric);
 
         // 1. User profile
         const age = await getUserAge(user_id);
 
         // 2. Save metric
         const saved = await saveMetric(metric, user_id, work_id);
-        if (!saved) return;
+        const metricData = saved || metric;
 
         // 3. Retry fallback nếu có
         await retryFallbackQueue();
@@ -268,7 +268,25 @@ export const processMetricJob = async (metric, socket, io) => {
 
         // 6. AI
         const hrSeq = await getHeartRateSequence(user_id);
-        const ai = await getAIAssessment(hrSeq);
+        const ai = await getAIAssessment(hrSeq, metric);
+
+        await prisma.AIPredictionLog.create({
+            data: {
+                user_id,
+                work_id,
+
+                risk_score: ai.risk_score || 0,
+                confidence: ai.confidence || 0,
+
+                prediction: ai.prediction || "normal",
+
+                reasons: ai.reasons || [],
+
+                current_heart_rate: metric.heart_rate || null,
+                steps: metric.steps || null,
+                stress_level: metric.stress_level || null
+            }
+        }).catch(console.error);
 
         // 7. Trend
         const trend = calculateTrend(hrSeq);
@@ -283,7 +301,7 @@ export const processMetricJob = async (metric, socket, io) => {
 
         // 10. Realtime response
         io.to(`user_${user_id}`).emit("metric_update", {
-            metric: saved,
+            metric: metricData,
             ai_risk: ai.risk_score,
             trend,
             status: level,

@@ -3,19 +3,19 @@ import { io } from "socket.io-client";
 const socket = io("http://localhost:3000");
 
 socket.on("connect", () => {
-  console.log("✅ Connected:", socket.id);
+  console.log("Connected:", socket.id);
 
-  // ✅ BƯỚC 1: tạo session
+  // BƯỚC 1: tạo session
   socket.emit("start_session", {
     user_id: "test-user-1"
   });
 });
 
-// ✅ nhận session từ server
+// nhận session từ server
 socket.on("session_created", (session) => {
-  console.log("📦 Session created:", session);
+  console.log("Session created:", session);
 
-  // ✅ BƯỚC 2: gửi metrics (ĐÃ SỬA event name)
+  // BƯỚC 2: gửi metrics (ĐÃ SỬA event name)
   socket.emit("stream_metric", {
     user_id: "test-user-1",
     metrics: [
@@ -29,17 +29,17 @@ socket.on("session_created", (session) => {
   });
 });
 
-// ✅ nhận kết quả xử lý
+// nhận kết quả xử lý
 socket.on("metric_update", (data) => {
-  console.log("📊 Metric Update:", data);
+  console.log("Metric Update:", data);
 });
 
-// ✅ nhận cảnh báo
+// nhận cảnh báo
 socket.on("emergency_alert", (data) => {
-  console.log("🚨 ALERT:", data);
+  console.log("ALERT:", data);
 });
 
 // debug
 socket.on("error", (err) => {
-  console.log("❌ ERROR:", err);
+  console.log("ERROR:", err);
 });
