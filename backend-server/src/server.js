@@ -29,20 +29,26 @@ setupSwagger(app);
 io.on('connection', (socket) => {
 
     socket.on('start_session', async ({ user_id }) => {
-        const session = await prisma.workoutSession.create({
-            data: {
-                user_id,
-                start_time: new Date(),
-                status: "ACTIVE"
-            }
-        });
-
+        console.log(`✅ [SOCKET] Nhận yêu cầu start_session từ user: ${user_id}`);
         socket.data.user_id = user_id;
-        socket.data.work_id = session.work_id;
-
         socket.join(`user_${user_id}`);
-
-        socket.emit("session_created", session);
+        
+        try {
+            const session = await prisma.workoutSession.create({
+                data: {
+                    user_id,
+                    start_time: new Date(),
+                    status: "ACTIVE"
+                }
+            });
+            socket.data.work_id = session.work_id;
+            socket.emit("session_created", session);
+            console.log(`✅ [SOCKET] Đã tạo session thành công cho user: ${user_id}`);
+        } catch (err) {
+            console.error(`❌ [SOCKET] Lỗi khi tạo workout session cho user ${user_id}:`, err.message);
+            // Vẫn emit một event fake để FE không bị block
+            socket.emit("session_created", { work_id: "fallback_session" });
+        }
     });
 
     socket.on('stream_metric', async (payload) => {

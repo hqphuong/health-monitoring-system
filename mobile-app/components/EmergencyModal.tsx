@@ -44,7 +44,7 @@ export const EmergencyModal = ({ visible, data, onClose }: EmergencyModalProps) 
              <Text style={styles.hrText}>{data?.heart_rate || '--'} BPM</Text>
           </View>
           <Text style={styles.sosMessage}>{data?.message || 'Phát hiện nhịp tim bất thường!'}</Text>
-          <Text style={styles.sosNote}>Hệ thống đang liên hệ với người thân của bạn...</Text>
+          <Text style={styles.sosNote}>Vui lòng dừng mọi hoạt động và nghỉ ngơi ngay lập tức!</Text>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>TÔI ĐÃ HIỂU</Text>
           </TouchableOpacity>

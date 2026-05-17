@@ -53,10 +53,13 @@ def extract_features(hr_seq, steps, stress):
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
+        logger.info("\n========== [AI SERVER] BẮT ĐẦU PHÂN TÍCH ==========")
         data = request.json
         hr_seq = data.get("heart_rate_history", [])
         steps = data.get("steps", 0)
         stress = data.get("stress_level", 0)
+        
+        logger.info(f"📥 Dữ liệu nhận được: HR History: {hr_seq}, Steps: {steps}, Stress: {stress}")
 
         # Validate & clean dữ liệu
         hr_seq = [
@@ -66,10 +69,12 @@ def predict():
         ]
 
         if len(hr_seq) < 5:
+            logger.warning(f"⚠️ Không đủ dữ liệu lịch sử nhịp tim (Cần >= 5, hiện có: {len(hr_seq)}). AI sẽ trả về điểm an toàn mặc định (0.1).")
+            logger.info("========== [AI SERVER] KẾT THÚC =================\n")
             return jsonify({"risk_score": 0.1, "prediction": "insufficient", "reasons": ["need_more_data"]})
 
         features, stats = extract_features(hr_seq, steps, stress)
-        logger.info(f"Features Vector: {features}")
+        logger.info(f"📊 Features Vector đã trích xuất: {features}")
 
         risk = 0.0
         reasons = []
@@ -106,6 +111,11 @@ def predict():
             reasons.append("sudden_hr_spike")
 
         final_risk = min(risk, 0.99)
+        logger.info(f"🧠 KẾT QUẢ AI: Điểm rủi ro (Risk Score): {final_risk}, Dự đoán: {'anomaly' if final_risk > 0.7 else 'normal'}")
+        if reasons:
+            logger.info(f"🚩 Lý do cảnh báo: {reasons}")
+        logger.info("========== [AI SERVER] KẾT THÚC =================\n")
+
         return jsonify({
             "risk_score": float(round(final_risk, 3)),
             "confidence": float(round(final_risk * 100, 2)),

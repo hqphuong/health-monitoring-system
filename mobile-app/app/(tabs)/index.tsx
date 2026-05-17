@@ -17,12 +17,18 @@ import { useHealthData } from '../../hooks/useHealthData';
 import { getUserData } from '../../services/auth';
 import { useHealthTips } from '../../hooks/useHealthTips';
 import { useWeeklySync } from '../../hooks/useWeeklySync'; // Import Hook nguyên bản vừa bóc tách
+import socketService from '../../services/socketService';
+import { readAllHealthData } from '../../services/healthConnect';
+import { EmergencyModal } from '../../components/EmergencyModal';
+import { TouchableOpacity, Text } from 'react-native';
 
 type TimeRange = 'day' | 'week' | 'month';
 
 export default function HomeScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [userName, setUserName] = useState<string>('');
+  const [alertData, setAlertData] = useState<any>(null);
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
 
   // 1. Gọi Hook đồng bộ nguyên bản 100% logic của Duy
   const { runWeeklySync, loading: isSyncing } = useWeeklySync();
@@ -133,9 +139,69 @@ export default function HomeScreen() {
 
   // SỬA TẠI ĐÂY: Khởi chạy phát đầu tiên khi mở app - Chỉ lấy tên và kéo data UI có sẵn, không tự động sync nữa
   useEffect(() => {
-    getUserData().then((u: any) => setUserName(u?.full_name || 'Duy'));
+    getUserData().then((u: any) => {
+      setUserName(u?.full_name || 'Duy');
+      
+      // Khởi tạo Socket.io
+      socketService.connect();
+      // Dùng user_id thật để DB không bị lỗi Foreign Key khi lưu
+      const userId = u?.user_id || '1bfbf31a-81ae-4fb5-9222-78e6576d8d5f';
+      socketService.startSession(userId);
+    });
     refresh(); // Chỉ gọi refresh để lấy data sẵn có từ Server Render lên UI
+
+    // Lắng nghe cảnh báo SOS
+    const handleEmergency = (data: any) => {
+      console.log('\n==================================================');
+      console.log('🚨 [MOBILE APP] NHẬN ĐƯỢC CẢNH BÁO TỪ BACKEND!');
+      console.log('Dữ liệu nhận được:', JSON.stringify(data, null, 2));
+      console.log('==================================================\n');
+
+      setAlertData({
+        ...data,
+        message: data.reasons?.join(', ') || 'Phát hiện rủi ro sức khỏe cao!'
+      });
+      setIsAlertVisible(true);
+    };
+    socketService.on('emergency_alert', handleEmergency);
+
+    // Sửa lại: Không gửi liên tục mỗi 10s nữa để tránh rác DB do Huawei Health không cập nhật realtime.
+    // Thay vào đó, ta sẽ chỉ gửi luồng Realtime khi nào người dùng dùng tính năng "Đo Trực Tiếp" (như Bluetooth).
+    // Ở đoạn này tôi tạm tắt interval tự động, và cung cấp nút "Test" bên dưới UI để bạn trải nghiệm luồng xử lý của AI.
+    
+    return () => {
+      socketService.off('emergency_alert', handleEmergency);
+      socketService.disconnect();
+    };
   }, []);
+
+  // Hàm mô phỏng dữ liệu nhịp tim cao gửi qua WebSocket để test
+  const simulateEmergency = async () => {
+    // 1. Đảm bảo Socket đã được bật và đăng ký Session
+    const u = await getUserData();
+    const userId = u?.user_id || '1bfbf31a-81ae-4fb5-9222-78e6576d8d5f';
+    socketService.startSession(userId);
+
+    // 2. Gửi metric cực cao để kích hoạt SOS
+    const fakeMetric = {
+      record_time: new Date().toISOString(),
+      heart_rate: 210, // Nhịp tim cực cao (Vượt ngưỡng 220-tuổi) để chắc chắn kích hoạt cảnh báo SOS
+      steps: 10,
+      blood_oxygen: 85, 
+      raw_data: { spo2: 85 }, // Backend đọc SpO2 từ raw_data.spo2
+      stress_level: 0
+    };
+    
+    // Đợi 500ms cho Backend xử lý xong start_session rồi mới gửi Metric
+    setTimeout(() => {
+      console.log('\n==================================================');
+      console.log('📡 [MOBILE APP] GỬI DỮ LIỆU LÊN BACKEND (SOCKET):');
+      console.log(JSON.stringify(fakeMetric, null, 2));
+      console.log('==================================================\n');
+
+      socketService.streamMetrics([fakeMetric]);
+    }, 500);
+  };
 
   return (
     <View style={styles.container}>
@@ -146,6 +212,15 @@ export default function HomeScreen() {
         isSyncing={isSyncing} // Hiển thị vòng xoay xoay trên Header dựa vào loading của hook gốc
         onRefresh={onRefresh} // Hàm này kích hoạt đồng bộ khi bấm nút trên Header
       />
+      
+      {/* NÚT TEST CẢNH BÁO ĐỂ DEMO LUỒNG MODULE B */}
+      <TouchableOpacity 
+        style={styles.testButton} 
+        onPress={simulateEmergency}
+      >
+        <Text style={styles.testButtonText}>⚠️ Test Giả lập Nhịp tim Cao (Kích hoạt AI)</Text>
+      </TouchableOpacity>
+
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -212,6 +287,13 @@ export default function HomeScreen() {
           content={randomTip?.content || "Duy trì lối sống lành mạnh cùng HealthGuard nhé!"}
         />
       </ScrollView>
+
+      {/* MODAL CẢNH BÁO */}
+      <EmergencyModal 
+        visible={isAlertVisible} 
+        data={alertData} 
+        onClose={() => setIsAlertVisible(false)} 
+      />
     </View>
   );
 }
@@ -221,4 +303,14 @@ const styles = StyleSheet.create({
   content: { flex: 1, backgroundColor: '#F8FAFC', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -Spacing.md },
   contentContainer: { padding: 20, paddingBottom: 40 },
   smallCardsRow: { flexDirection: 'row', gap: 15, marginBottom: 15 },
+  testButton: { 
+    backgroundColor: '#FF3B30', 
+    marginHorizontal: 20, 
+    marginBottom: 15, 
+    padding: 12, 
+    borderRadius: 12, 
+    alignItems: 'center',
+    elevation: 3
+  },
+  testButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });

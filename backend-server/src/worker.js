@@ -191,8 +191,24 @@ const shouldSendAlert = (level, socket) => {
 
 // Gửi alert
 // Gửi alert
-const sendAlert = async ({ level, metric, ai, trend, user_id, work_id, socket, io }) => {
+const sendAlert = async ({ level, metric, ai, medical, trend, user_id, work_id, socket, io }) => {
     socket.data.lastAlert = Date.now();
+
+    // Map AI reasons sang tiếng Việt
+    const aiReasonMap = {
+        "ml_detected_anomaly": "AI dự đoán dấu hiệu bất thường",
+        "high_hr_resting": "Nhịp tim nghỉ ngơi quá cao",
+        "sudden_hr_spike": "Nhịp tim tăng vọt đột biến",
+        "need_more_data": "Chưa đủ dữ liệu AI"
+    };
+
+    const translatedAiReasons = (ai.reasons || []).map(r => aiReasonMap[r] || r);
+    
+    // Gộp lý do từ Luật Y Khoa (nếu có) và AI
+    const combinedReasons = [
+        ...(medical?.reasons || []),
+        ...translatedAiReasons
+    ];
 
     // 1. Lưu log cảnh báo vào DB
     await prisma.alertLog.create({
@@ -211,31 +227,31 @@ const sendAlert = async ({ level, metric, ai, trend, user_id, work_id, socket, i
         level,
         ai_risk: ai.risk_score,
         trend,
-        reasons: ai.reasons || [],
+        reasons: combinedReasons,
         heart_rate: metric.heart_rate
     });
 
-    // 3. 🔥 NẾU LÀ SOS: Tìm và gửi tin nhắn/log cho người thân
-    if (level === "SOS") {
-        const primaryContact = await prisma.relative.findFirst({
-            where: { 
-                user_id: user_id, 
-                is_primary: true 
-            }
-        });
+    // 3. 🔥 TẠM THỜI BỎ QUA CHỨC NĂNG BÁO NGƯỜI THÂN THEO YÊU CẦU
+    // if (level === "SOS") {
+    //     const primaryContact = await prisma.relative.findFirst({
+    //         where: { 
+    //             user_id: user_id, 
+    //             is_primary: true 
+    //         }
+    //     });
 
-        console.log("--------------------------------------------------");
-        console.log(`🚨 [SOS WORKER] CẢNH BÁO KHẨN CẤP!`);
-        if (primaryContact) {
-            console.log(`📞 ĐÃ GỬI THÔNG BÁO TỚI NGƯỜI THÂN: ${primaryContact.contact_name}`);
-            console.log(`📱 SỐ ĐIỆN THOẠI: ${primaryContact.phone_num}`);
+    //     console.log("--------------------------------------------------");
+    //     console.log(`🚨 [SOS WORKER] CẢNH BÁO KHẨN CẤP!`);
+    //     if (primaryContact) {
+    //         console.log(`📞 ĐÃ GỬI THÔNG BÁO TỚI NGƯỜI THÂN: ${primaryContact.contact_name}`);
+    //         console.log(`📱 SỐ ĐIỆN THOẠI: ${primaryContact.phone_num}`);
             
-            // io.to(`user_${primaryContact.relative_id}`).emit("relative_emergency", { ... });
-        } else {
-            console.log("⚠️ [SOS WORKER] User chưa thiết lập liên hệ khẩn cấp.");
-        }
-        console.log("--------------------------------------------------");
-    }
+    //         // io.to(`user_${primaryContact.relative_id}`).emit("relative_emergency", { ... });
+    //     } else {
+    //         console.log("⚠️ [SOS WORKER] User chưa thiết lập liên hệ khẩn cấp.");
+    //     }
+    //     console.log("--------------------------------------------------");
+    // }
 
     console.log("ALERT SENT:", level);
 };
@@ -246,10 +262,13 @@ export const processMetricJob = async (metric, socket, io) => {
     const work_id = socket.data.work_id;
 
     try {
-        console.log("PROCESS METRIC:", metric);
+        console.log("\n==================================================");
+        console.log("📥 [WORKER] NHẬN ĐƯỢC METRIC MỚI TỪ APP (SOCKET):");
+        console.log(JSON.stringify(metric, null, 2));
 
         // 1. User profile
         const age = await getUserAge(user_id);
+        console.log(`👤 Tuổi User: ${age}`);
 
         // 2. Save metric
         const saved = await saveMetric(metric, user_id, work_id);
@@ -265,12 +284,14 @@ export const processMetricJob = async (metric, socket, io) => {
 
         // 5. Rule-based
         const medical = evaluateHealthData(metric, age, isResting);
+        console.log("🩺 [RULE-BASED] Kết quả chẩn đoán y khoa:", JSON.stringify(medical, null, 2));
 
         // 6. AI
         const hrSeq = await getHeartRateSequence(user_id);
         const ai = await getAIAssessment(hrSeq, metric);
+        console.log("🧠 [AI-SERVER] Trả về điểm rủi ro:", JSON.stringify(ai, null, 2));
 
-        await prisma.AIPredictionLog.create({
+        await prisma.aIPredictionLog.create({
             data: {
                 user_id,
                 work_id,
@@ -293,10 +314,12 @@ export const processMetricJob = async (metric, socket, io) => {
 
         // 8. Final decision
         const level = determineAlertLevel(medical, ai, trend);
+        console.log("🚨 [FINAL DECISION] Mức độ cảnh báo chốt lại:", level);
+        console.log("==================================================\n");
 
         // 9. Alert
         if (shouldSendAlert(level, socket)) {
-            await sendAlert({ level, metric, ai, trend, user_id, work_id, socket, io });
+            await sendAlert({ level, metric, ai, medical, trend, user_id, work_id, socket, io });
         }
 
         // 10. Realtime response
