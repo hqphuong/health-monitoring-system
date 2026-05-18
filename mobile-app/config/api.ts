@@ -5,7 +5,7 @@
 // Base URL của API trên Render
 //const SERVER_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.197:3000';
 //const SERVER_URL = process.env.EXPO_PUBLIC_API_URL;
-const SERVER_URL = 'http://192.168.31.197:3000';
+const SERVER_URL = 'https://healthguard-api-42q2.onrender.com';
 
 export const API_CONFIG = {
   BASE_URL: `${SERVER_URL}/api/v1`,
