@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "postinstall": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "postinstall": "npx prisma generate",
     "start": "node src/server.js",
     "test": "vitest --run",
     "dev": "node --env-file=.env src/server.js"
@@ -29,7 +29,8 @@
     "socket.io-client": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "twilio": "^5.13.1"
+    "twilio": "^5.13.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

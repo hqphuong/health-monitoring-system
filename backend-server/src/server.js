@@ -6,6 +6,8 @@ import { pushToQueue } from './queue.js';
 import { processMetricJob } from './worker.js';
 import apiRoutes from './routes/index.js';
 import { setupSwagger } from './config/swagger.js';
+import cors from 'cors';
+
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +17,8 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 app.set('io', io);
+
+app.use(cors());
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
