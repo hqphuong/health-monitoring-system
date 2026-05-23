@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "290905963940",
+    "project_id": "health-monitoring-app-84889",
+    "storage_bucket": "health-monitoring-app-84889.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:290905963940:android:d6cf46981d245fdaa55531",
+        "android_client_info": {
+          "package_name": "com.namhu147.mobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7cHAl9Je0aqep8M2GdVZZCTgpDqVXDuU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
