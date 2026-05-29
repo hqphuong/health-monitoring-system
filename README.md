@@ -1,12 +1,9 @@
-# Hệ Thống Theo Dõi Sức Khỏe
+# HealthGuard - Hệ Thống Theo Dõi Sức Khỏe & Cảnh Báo SOS
 
-Đồ án đa ngành hướng Công nghệ phần mềm. Hệ thống thu thập dữ liệu nhịp tim, huyết áp, bước chân,... từ thiết bị đeo tay thông qua Health Connect, phân tích rủi ro bằng AI và phát tín hiệu cấp cứu SOS.
+HealthGuard là đồ án đa ngành hướng Công nghệ phần mềm. Hệ thống cung cấp giải pháp toàn diện để thu thập dữ liệu sinh trắc học (nhịp tim, huyết áp, bước chân, giấc ngủ...) từ thiết bị đeo thông qua Google Health Connect. Dữ liệu được xử lý liên tục để phân tích rủi ro y tế và tự động kích hoạt mạng lưới gọi điện cấp cứu (SOS) cho người thân trong tình huống nguy hiểm.
 
-## Tech Stack
-* **Frontend:** React Native / Expo
-* **Backend:** Node.js (Express) & Prisma ORM
-* **Database:** PostgreSQL
-* **AI Service:** Python
+## Liên Kết Quan Trọng (Demo & Cài đặt)
+* **Thư mục lưu trữ (Bao gồm Video Demo & File cài đặt .apk):** [Truy cập tại Google Drive](https://drive.google.com/drive/folders/1jkrzH6nKyrrWNxv-QR9cO9omz5XhBn_d?usp=sharing)
 
 ## Cấu trúc Thư mục
 * `/mobile-app`: Mã nguồn ứng dụng di động.
@@ -38,9 +35,6 @@ backend-server/
 ├── .env                        # Chứa biến môi trường (Database URL, Secret Key)
 └── package.json
 '''
-## Đội ngũ Phát triển
-
-
 ## Note
 
 Set up neon
