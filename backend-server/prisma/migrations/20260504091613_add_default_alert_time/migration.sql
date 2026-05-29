@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "alert_log" ALTER COLUMN "alert_time" SET DEFAULT CURRENT_TIMESTAMP;

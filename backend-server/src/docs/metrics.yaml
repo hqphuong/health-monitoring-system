@@ -1,0 +1,135 @@
+tags:
+  - name: HealthMetrics
+    description: Quản lý và đồng bộ dữ liệu chỉ số sức khỏe
+
+paths:
+  /metrics/:
+    post:
+      summary: Đồng bộ dữ liệu sức khỏe từ thiết bị (Bulk Insert)
+      description: Nhận danh sách dữ liệu sinh lý từ thiết bị đeo. Phân tích mức độ cảnh báo (NORMAL, WARNING, SOS).
+      tags: [HealthMetrics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_id
+                - metrics
+              properties:
+                device_id:
+                  type: string
+                  example: "hw_mac_cd34"
+                metrics:
+                  type: array
+                  minItems: 1
+                  description: "Mảng chứa các bản ghi sức khỏe."
+                  items:
+                    type: object
+                    required:
+                      - record_time
+                    properties:
+                      record_time:
+                        type: string
+                        format: date-time
+                        example: "2026-03-30T06:40:00Z"
+                      heart_rate:
+                        type: integer
+                        example: 180
+                      steps:
+                        type: integer
+                        example: 0
+                      sleep_duration:
+                        type: integer
+                        example: 420
+                        nullable: true
+                      stress_level:
+                        type: integer
+                        example: 18
+                      raw_data:
+                        type: object
+                        nullable: true
+                        example: { "spo2": 98 }
+      responses:
+        201:
+          description: Đồng bộ dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  message: "Đã đồng bộ 2 bản ghi."
+                  alert:
+                    level: "SOS"
+                    message: "Cảnh báo: Nhịp tim cao bất thường!"
+        400:
+          description: Dữ liệu payload gửi lên không hợp lệ
+        401:
+          description: Thiếu Token hoặc Token đã hết hạn
+        500:
+          description: Lỗi hệ thống máy chủ
+  /metrics:
+    get:
+      summary: Lấy lịch sử dữ liệu sức khỏe (Dashboard)
+      description: Truy xuất danh sách các chỉ số sức khỏe của User hiện tại để vẽ biểu đồ hoặc xem lịch sử. Hỗ trợ lọc theo số ngày và giới hạn số lượng bản ghi để tối ưu hiệu năng.
+      tags: [HealthMetrics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 7
+          description: "Số ngày muốn lấy dữ liệu tính từ hiện tại (Ví dụ: 1 = hôm nay, 7 = tuần qua, 30 = tháng qua)"
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: "Giới hạn số lượng bản ghi trả về (Tránh treo App)"
+      responses:
+        200:
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  message: "Lấy thành công 46 bản ghi trong 7 ngày qua."
+                  data:
+                    - health_id: "a5241d0c-4e28-4be5-ae84-1a3ec9ec3d1a"
+                      user_id: "6b13d3c9-d213-4422-b039-e33cca967fe5"
+                      work_id: null
+                      record_time: "2026-03-30T06:45:00.000Z"
+                      heart_rate: 60
+                      steps: 165
+                      sleep_duration: null
+                      stress_level: 22
+                      raw_data:
+                        steps: 165
+                        heart_rate: 60
+                        record_time: "2026-03-30T06:45:00Z"
+                        stress_level: 22
+                    - health_id: "17e1c4b6-e9a1-4c5c-92c4-01ff2024b60d"
+                      user_id: "6b13d3c9-d213-4422-b039-e33cca967fe5"
+                      work_id: null
+                      record_time: "2026-03-30T06:45:00.000Z"
+                      heart_rate: 60
+                      steps: 165
+                      sleep_duration: null
+                      stress_level: 22
+                      raw_data:
+                        steps: 165
+                        heart_rate: 60
+                        record_time: "2026-03-30T06:45:00Z"
+                        stress_level: 22
+        401:
+          description: Thiếu Token hoặc Token đã hết hạn
+        500:
+          description: Lỗi hệ thống máy chủ

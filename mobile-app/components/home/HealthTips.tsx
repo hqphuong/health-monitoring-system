@@ -1,0 +1,85 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Typography, Spacing, BorderRadius } from '../../constants/Colors';
+import { API_CONFIG, ENDPOINTS } from '@/config/api';
+
+interface HealthTipCardProps {
+  category?: string;
+  content?: string; // SỬA LỖI: Thêm prop này để Dashboard có thể truyền dữ liệu vào
+}
+
+const HealthTipCard: React.FC<HealthTipCardProps> = ({ category, content }) => {
+  const [tip, setTip] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Nếu Dashboard đã truyền 'content' xuống thì dùng luôn, không fetch nữa
+    if (content) {
+      setTip(content);
+      setLoading(false);
+      return;
+    }
+
+    const fetchRandomTip = async () => {
+      try {
+        const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.HEALTH_TIPS_RANDOM}${category ? `?category=${category}` : ''}`;
+        const response = await fetch(url);
+        const json = await response.json();
+
+        if (json.status === 'success' && json.data.length > 0) {
+          setTip(json.data[0].content);
+        }
+      } catch (error) {
+        console.error("Lỗi fetch health tips:", error);
+        setTip('Hãy uống đủ nước mỗi ngày để duy trì sức khỏe.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRandomTip();
+  }, [category, content]); // Thêm content vào dependency
+
+  return (
+    <View style={styles.tipsCard}>
+      <View style={styles.tipsHeader}>
+        <Ionicons name="bulb" size={20} color={Colors.secondary.orange} />
+        <Text style={styles.tipsTitle}>Lời khuyên</Text>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="small" color={Colors.secondary.orange} />
+      ) : (
+        <Text style={styles.tipsText}>{tip}</Text>
+      )}
+    </View>
+  );
+};
+
+export default HealthTipCard;
+
+const styles = StyleSheet.create({
+  tipsCard: {
+    backgroundColor: Colors.status.warningLight,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md, // Thêm margin bottom để không dính vào dưới
+  },
+  tipsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  tipsTitle: {
+    fontSize: Typography.fontSizes.base,
+    fontWeight: Typography.fontWeights.semibold,
+    color: Colors.secondary.orange,
+  },
+  tipsText: {
+    fontSize: Typography.fontSizes.sm,
+    color: Colors.neutral.textSecondary,
+    lineHeight: 20,
+  },
+});

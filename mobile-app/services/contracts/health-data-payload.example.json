@@ -1,0 +1,19 @@
+{
+  "user_id": "usr_001",
+  "device_id": "dev_watch_01",
+  "metrics": [
+    {
+      "record_time": "2026-03-30T06:30:00Z",
+      "heart_rate": 72,
+      "steps": 120,
+      "sleep_duration": 420,
+      "stress_level": 18
+    },
+    {
+      "record_time": "2026-03-30T06:35:00Z",
+      "heart_rate": 78,
+      "steps": 165,
+      "stress_level": 22
+    }
+  ]
+}
