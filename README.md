@@ -109,5 +109,3 @@ npx expo start
 
 ---
 
-Run
-node src/server.js
