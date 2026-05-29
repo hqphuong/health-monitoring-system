@@ -10,7 +10,7 @@ HealthGuard là đồ án đa ngành hướng Công nghệ phần mềm. Hệ th
 * `/backend-server`: Mã nguồn máy chủ xử lý logic và API.
 * `/ai-service`: Mô hình phân tích dữ liệu.
 * `/database`: Chứa script SQL khởi tạo bảng.
-'''
+```text
 backend-server/
 ├── prisma/
 │   └── schema.prisma           # Chứa cấu trúc Database
@@ -34,7 +34,7 @@ backend-server/
 │   └── server.js               # File gốc khởi chạy toàn bộ server Node.js
 ├── .env                        # Chứa biến môi trường (Database URL, Secret Key)
 └── package.json
-'''
+```
 ## Note
 
 Set up neon
